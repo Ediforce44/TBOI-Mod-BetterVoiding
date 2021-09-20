@@ -6,8 +6,9 @@ TableEx = {}
 
 ----------------------------------------------------
 -- Removes all entrys with nil values in keyTable
+----- @Return: New table with updated entries
 ----------------------------------------------------
---       !!! Doesn't obtain Positions !!!         --
+--       !!! Doesn't obtain Positions !!!
 function TableEx.updateTable(keyTable)
     local updatedTable = {}
     for k,v in pairs(keyTable) do
@@ -20,6 +21,7 @@ end
 
 ------------------------------------------------
 -- Returns key for lowest value in a keyTable
+----- @Return: Key from keyTable
 ------------------------------------------------
 function TableEx.getKeyOfLowestValue(keyTable)
     local key = nil
@@ -37,6 +39,7 @@ end
 
 ------------------------------------------------
 -- Returns key for highest value in a keyTable
+----- @Return: Key from keyTable
 ------------------------------------------------
 function TableEx.getKeyOfHighestValue(keyTable)
     local key = nil
@@ -52,4 +55,5 @@ function TableEx.getKeyOfHighestValue(keyTable)
     return key
 end
 
+-------------------------------------------------------------------------------------------------------
 return TableEx

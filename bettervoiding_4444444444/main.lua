@@ -12,8 +12,7 @@ local BetterVoiding = RegisterMod("Better Voiding", 1)
 local debugText = 0
 
 function BetterVoiding:drawDebugText()
-    --bloodyPayNearestItem(Isaac.GetPlayer())
-    Isaac.RenderText(debugText, 100, 100, 255, 0, 0, 255)
+    Isaac.RenderText(debugText, 50, 50, 255, 0, 0, 255)
 end
 
 BetterVoiding:AddCallback(ModCallbacks.MC_POST_RENDER, BetterVoiding.drawDebugText)
@@ -26,7 +25,6 @@ BetterVoiding:AddCallback(ModCallbacks.MC_POST_RENDER, BetterVoiding.drawDebugTe
 -----------------------------------------
 local game = Game()
 local collDist = {}
-local usedColls = {}
 
 
 -------------------------------------
@@ -40,13 +38,14 @@ end
 
 -------------------------------------------------------------------
 -- Determins all collectibles and its distance to the playerEntity
+--      <<< !Needs to be called before everything else! >>>
 -------------------------------------------------------------------
 local function calculateCollDist(playerEntity)
     collDist = {}
     local allEntities = Isaac.GetRoomEntities()
     for _,collEntity in pairs(allEntities) do    -- Filter room for collectibles
         if (collEntity.Type == EntityType.ENTITY_PICKUP and collEntity.Variant == PickupVariant.PICKUP_COLLECTIBLE) then
-            collDist[collEntity] = vecDistance2D(playerEntity.Position, collEntity.Position)
+            collDist[collEntity:ToPickup()] = vecDistance2D(playerEntity.Position, collEntity.Position)
         end
     end
 end
@@ -54,26 +53,77 @@ end
 --------------------------------------------------------
 -- Removes entity from the game and the collDist table
 --------------------------------------------------------
-local function despawnEntity(entity)
-    collDist[entity] = nil
+local function despawnColl(itemPickup)
+    collDist[itemPickup] = nil
     collDist = TableEx.updateTable(collDist)
-    entity:Remove()
+    itemPickup:Remove()
 end
 
---------------------------------------------------------
--- Pay nearest item in a heart deal
--------------------------------------------------------
-local function payNearestItem(sourceEntity)
+-------------------------------------------------------------------------
+-- Removes all items with the same OptionsPickupIndex as the itemPickup
+-------------------------------------------------------------------------
+local function managePickupIndex(itemPickup)
+    if itemPickup == nil then
+        return
+    end
 
-    local itemEntity = BetterVoiding:getNearestItem(sourceEntity)
+    local index = itemPickup.OptionsPickupIndex
+    if index ~= 0 then
+        for item,_ in pairs(collDist) do
+            if (item ~= itemPickup and item.OptionsPickupIndex == index) then
+                despawnColl(item)
+            end
+        end
+    end
+end
 
-    if itemEntity == nil then
+----------------------------------------------------------------------------------------------
+-- Removes all items with the same OptionsPickupIndex except the nearest items for each index
+----------------------------------------------------------------------------------------------
+local function manageAllPickupIndices()
+    local indexTables = {}
+
+    for item,dist in pairs(collDist) do
+        local index = item.OptionsPickupIndex
+        if indexTables[index] == nil then
+            indexTables[index] = {}
+        end
+        if item.OptionsPickupIndex ~= 0 then
+            indexTables[item.OptionsPickupIndex][item] = dist
+        end
+    end
+
+    for _,table in pairs(indexTables) do
+        local item = TableEx.getKeyOfLowestValue(table)
+        managePickupIndex(item)
+    end
+end
+
+----------------------------------------------
+-- Returns nearest item to the sourceEntity
+----- @Return: Nearest item
+----------------------------------------------
+function BetterVoiding:getNearestItem(sourceEntity)
+    local nearestItem = nil
+
+    calculateCollDist(sourceEntity)
+    nearestItem = TableEx.getKeyOfLowestValue(collDist)
+    return nearestItem
+end
+
+-------------------------------------
+-- Pay nearest item to sourceEntity
+----- @Return: Nearest item
+-------------------------------------
+function BetterVoiding:payNearestItem(sourceEntity)
+
+    local itemPickup = BetterVoiding:getNearestItem(sourceEntity)
+
+    if itemPickup == nil then
         return nil
     end
 
-    local itemPickup = itemEntity:ToPickup()
-
-    if (itemEntity:ToPickup().Price ~= 0) then    --Item has price
+    if (itemPickup.Price ~= 0) then    --Item has price
 
         -- Kill entity if it's not the first player
         if (GetPtrHash(sourceEntity) ~= GetPtrHash(Isaac.GetPlayer())) then
@@ -138,41 +188,52 @@ local function payNearestItem(sourceEntity)
             end
         end
         -- Exchange item
-        despawnEntity(itemEntity) -- Despawn item
-        Isaac.Spawn(itemPickup.Type, itemPickup.Variant, itemPickup.SubType, itemEntity.Position, Vector(0,0), nil) -- Spawn item without price
+        despawnColl(itemPickup)
+        itemPickup = Isaac.Spawn(itemPickup.Type, itemPickup.Variant, itemPickup.SubType
+                                    , itemPickup.Position, Vector(0,0), nil):ToPickup()
 
         -- Devildeals only
         if game:GetRoom():GetType() == RoomType.ROOM_DEVIL then
             game:AddDevilRoomDeal()
         end
-
-        return itemPickup
     end
 
-    return nil -- If entity is nil or item with no price
+    return itemPickup --return nearest item
 end
 
---------------------------------------------------------
--- Remove all items in the room exept the nearest Item
---------------------------------------------------------
-local function removeOtherItems()
-    payNearestItem(Isaac.GetPlayer())
+----------------------------------------------------------------
+-- Prepares everything for voiding NEAREST item to sourceEntity
+----- @Return: Nearest item
+----------------------------------------------------------------
+function BetterVoiding:betterVoidingNearestItem(sourceEntity)
+    local item = BetterVoiding:payNearestItem(sourceEntity)
+
+    managePickupIndex(item)
+    return item
+end
+
+-------------------------------------------------------------------------------------------------
+-- Prepares everything for voiding ALL items next to sourceEntity !!!(pays only nearest item)!!!
+----- @Return: Table of (Keys: remaining items, Values: Distance to sourceEntity)
+-------------------------------------------------------------------------------------------------
+function BetterVoiding:betterVoidingAllItems(sourceEntity)
+    BetterVoiding:payNearestItem(sourceEntity)
+
+    manageAllPickupIndices()
+    return {table.unpack(collDist)}
+end
+
+
+---------------------------------------------------------------------------------------------------------
+--ModCallbacks
+---------------------------------------------------------------------------------------------------------
+
+-- Function for existing voiding-items and their ModCallbacks
+local function betterVoiding()
+    BetterVoiding:betterVoidingAllItems(Isaac.GetPlayer())
     return nil
 end
 
-------------------------------------------------------
--- Returns nearest collectible to the playerEntity
-------------------------------------------------------
-function BetterVoiding:getNearestItem(playerEntity)
-    local nearestItem = nil
-
-    calculateCollDist(playerEntity)
-    nearestItem = TableEx.getKeyOfLowestValue(collDist)
-    if (nearestItem ~= nil) then
-        table.insert(usedColls, 1, nearestItem)
-    end
-    return nearestItem
-end
-
-BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, removeOtherItems, Isaac.GetItemIdByName("Void"))
-BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, removeOtherItems, Isaac.GetItemIdByName("Abyss"))
+BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))
+BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Abyss"))
+---------------------------------------------------------------------------------------------------------

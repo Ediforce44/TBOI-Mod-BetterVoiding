@@ -55,5 +55,17 @@ function TableEx.getKeyOfHighestValue(keyTable)
     return key
 end
 
+---------------------------------
+-- Copy a keyTable
+----- @Return: Copy of keyTable
+---------------------------------
+function TableEx.copy(keyTable)
+    local copiedTable = {}
+    for key, value in pairs(keyTable) do
+        copiedTable[key] = value
+    end
+    return copiedTable
+end
+
 -------------------------------------------------------------------------------------------------------
 return TableEx

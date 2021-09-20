@@ -43,6 +43,7 @@ end
 local function calculateCollDist(playerEntity)
     collDist = {}
     local allEntities = Isaac.GetRoomEntities()
+
     for _,collEntity in pairs(allEntities) do    -- Filter room for collectibles
         if (collEntity.Type == EntityType.ENTITY_PICKUP and collEntity.Variant == PickupVariant.PICKUP_COLLECTIBLE) then
             collDist[collEntity:ToPickup()] = vecDistance2D(playerEntity.Position, collEntity.Position)
@@ -51,9 +52,9 @@ local function calculateCollDist(playerEntity)
 end
 
 --------------------------------------------------------
--- Removes entity from the game and the collDist table
+-- Removes the item from the game and the collDist table
 --------------------------------------------------------
-local function despawnColl(itemPickup)
+local function despawnItem(itemPickup)
     collDist[itemPickup] = nil
     collDist = TableEx.updateTable(collDist)
     itemPickup:Remove()
@@ -71,7 +72,8 @@ local function managePickupIndex(itemPickup)
     if index ~= 0 then
         for item,_ in pairs(collDist) do
             if (item ~= itemPickup and item.OptionsPickupIndex == index) then
-                despawnColl(item)
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, item.Position, Vector(0,0), item)
+                despawnItem(item)
             end
         end
     end
@@ -82,21 +84,33 @@ end
 ----------------------------------------------------------------------------------------------
 local function manageAllPickupIndices()
     local indexTables = {}
+    local index = 0
 
     for item,dist in pairs(collDist) do
-        local index = item.OptionsPickupIndex
+        index = item.OptionsPickupIndex
+        if (index == 0) then -- skip this iteration
+            goto forend
+        end
+
         if indexTables[index] == nil then
             indexTables[index] = {}
         end
-        if item.OptionsPickupIndex ~= 0 then
-            indexTables[item.OptionsPickupIndex][item] = dist
-        end
+        indexTables[item.OptionsPickupIndex][item] = dist
+
+        ::forend::
     end
 
     for _,table in pairs(indexTables) do
         local item = TableEx.getKeyOfLowestValue(table)
         managePickupIndex(item)
     end
+end
+
+-------------------------------------------------
+-- Removes additional items spawned by damocles
+-------------------------------------------------
+local function damoclesFix(itemPickup)
+    --@TODO
 end
 
 ----------------------------------------------
@@ -188,9 +202,11 @@ function BetterVoiding:payNearestItem(sourceEntity)
             end
         end
         -- Exchange item
-        despawnColl(itemPickup)
-        itemPickup = Isaac.Spawn(itemPickup.Type, itemPickup.Variant, itemPickup.SubType
-                                    , itemPickup.Position, Vector(0,0), nil):ToPickup()
+        local tempDist = collDist[itemPickup]
+        despawnItem(itemPickup)
+        itemPickup = Isaac.Spawn(itemPickup.Type, itemPickup.Variant, itemPickup.SubType, itemPickup.Position, Vector(0,0), nil):ToPickup()
+        collDist[itemPickup] = tempDist
+        damoclesFix(itemPickup)
 
         -- Devildeals only
         if game:GetRoom():GetType() == RoomType.ROOM_DEVIL then
@@ -220,18 +236,53 @@ function BetterVoiding:betterVoidingAllItems(sourceEntity)
     BetterVoiding:payNearestItem(sourceEntity)
 
     manageAllPickupIndices()
-    return {table.unpack(collDist)}
+    return TableEx.copy(collDist)
+end
+
+
+--        <<< Including removing item(s) and play animation >>>
+
+-----------------------------------------------------------------------
+-- Prepares everything for voiding NEAREST item to sourceEntity
+----- @Return: CollectibleType/EntitySubtye of nearest item
+-----------------------------------------------------------------------
+function BetterVoiding:betterVoidingNearestItemRA(sourceEntity)
+    local item = BetterVoiding:betterVoidingNearestItem(sourceEntity)
+    local collType = nil
+    if item ~= nil then
+        collType = item.SubType
+        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, item.Position, Vector(0,0), item) -- play animation
+        despawnItem(item)
+    end
+    return collType
+end
+
+-------------------------------------------------------------------------------------------------
+-- Prepares everything for voiding ALL items next to sourceEntity !!!(pays only nearest item)!!!
+----- @Return: Table of (Values: CollectibleTypes/EntitySubtypes of all voided items)
+-------------------------------------------------------------------------------------------------
+function BetterVoiding:betterVoidingAllItemsRA(sourceEntity)
+    local items = BetterVoiding:betterVoidingAllItems(sourceEntity)
+    local collTypes = {}
+    for item,_ in pairs(items) do
+        if item.Price == 0 then
+            table.insert(collTypes, item.SubType)
+            Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, item.Position, Vector(0,0), item) -- play animation
+            despawnItem(item)
+        end
+    end
+    return collTypes
 end
 
 
 ---------------------------------------------------------------------------------------------------------
---ModCallbacks
+-- ModCallbacks
 ---------------------------------------------------------------------------------------------------------
 
 -- Function for existing voiding-items and their ModCallbacks
 local function betterVoiding()
     BetterVoiding:betterVoidingAllItems(Isaac.GetPlayer())
-    return nil
+    return true
 end
 
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))

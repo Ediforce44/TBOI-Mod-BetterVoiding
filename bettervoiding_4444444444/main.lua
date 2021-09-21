@@ -27,15 +27,6 @@ local collDist = {}
 local tYourSoulID = TrinketType.TRINKET_YOUR_SOUL
 
 
--------------------------------------
--- Simple missing math functions
--------------------------------------
-
--- Distance between two 2D Vectors/Points
-local function vecDistance2D(pos1, pos2)
-    return math.sqrt((pos1.X-pos2.X)^2 + (pos1.Y-pos2.Y)^2)
-end
-
 -------------------------------------------------------------------
 -- Determins all collectibles and its distance to the playerEntity
 --      <<< !Needs to be called before everything else! >>>
@@ -47,7 +38,7 @@ local function calculateCollDist(playerEntity)
     for _,collEntity in pairs(allEntities) do    -- Filter room for collectibles
         if (collEntity.Type == EntityType.ENTITY_PICKUP and collEntity.Variant == PickupVariant.PICKUP_COLLECTIBLE 
                 and collEntity.SubType ~= CollectibleType.COLLECTIBLE_NULL) then
-            collDist[collEntity:ToPickup()] = vecDistance2D(playerEntity.Position, collEntity.Position)
+            collDist[collEntity:ToPickup()] = playerEntity.Position:Distance(collEntity.Position)
         end
     end
 end
@@ -178,12 +169,21 @@ function BetterVoiding:payNearestItem(sourceEntity)
 
             elseif itemPrice == PickupPrice.PRICE_SPIKES then
                 playerEntity:TakeDamage(2, DamageFlag.DAMAGE_NO_PENALTIES, EntityRef(itemPickup), 0)
+                local entityList = Isaac.GetRoomEntities()
+                for _,entity in pairs(entityList) do
+                    if entity.Type == EntityType.ENTITY_EFFECT and entity.Variant == EffectVariant.SHOP_SPIKES then
+                        if entity.Position.X == itemPickup.Position.X and entity.Position.Y == itemPickup.Position.Y then
+                            Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.SHOP_SPIKES, 1, entity.Position, Vector(0,0), nil)
+                            entity:Remove()
+                        end
+                    end
+                end
 
             elseif itemPrice == PickupPrice.PRICE_SOUL then
                 if not playerEntity:HasTrinket(tYourSoulID, false) then
                     return nil
                 end
-                if tostring(playerEntity:TryRemoveTrinket(tYourSoulID)) then
+                if not playerEntity:TryRemoveTrinket(tYourSoulID) then
                     return nil
                 end
                 playerEntity:TryRemoveTrinketCostume(tYourSoulID)
@@ -284,7 +284,7 @@ end
 -- Function for existing voiding-items and their ModCallbacks
 local function betterVoiding()
     BetterVoiding:betterVoidingAllItems(Isaac.GetPlayer())
-    return true
+    return nil
 end
 
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))

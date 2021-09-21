@@ -8,7 +8,7 @@ local BetterVoiding = RegisterMod("Better Voiding", 1)
 
 ----------------------------------------------------
 -- Test
-local debugText = 0
+local debugText = ""
 
 function BetterVoiding:drawDebugText()
     Isaac.RenderText(debugText, 50, 50, 255, 0, 0, 255)
@@ -24,12 +24,7 @@ BetterVoiding:AddCallback(ModCallbacks.MC_POST_RENDER, BetterVoiding.drawDebugTe
 ----------------------------------------------------------
 local game = Game()
 local collDist = {}
-local manuallySpawned = false
 local tYourSoulID = TrinketType.TRINKET_YOUR_SOUL
-
-function BetterVoiding:manuallySpawnedItem()
-    return manuallySpawned
-end
 
 
 -------------------------------------
@@ -50,7 +45,8 @@ local function calculateCollDist(playerEntity)
     local allEntities = Isaac.GetRoomEntities()
 
     for _,collEntity in pairs(allEntities) do    -- Filter room for collectibles
-        if (collEntity.Type == EntityType.ENTITY_PICKUP and collEntity.Variant == PickupVariant.PICKUP_COLLECTIBLE) then
+        if (collEntity.Type == EntityType.ENTITY_PICKUP and collEntity.Variant == PickupVariant.PICKUP_COLLECTIBLE 
+                and collEntity.SubType ~= CollectibleType.COLLECTIBLE_NULL) then
             collDist[collEntity:ToPickup()] = vecDistance2D(playerEntity.Position, collEntity.Position)
         end
     end
@@ -111,27 +107,6 @@ local function manageAllPickupIndices()
     end
 end
 
--------------------------------------------------------
--- Removes additionally spawned items (i.e. by damocles)
--------------------------------------------------------
-local function despawnAdditionallySpawnedItems()
-    local entities = Isaac.GetRoomEntities()
-    for _,entity in pairs(entities) do
-        if (entity.Type == EntityType.ENTITY_PICKUP and entity.Variant == PickupVariant.PICKUP_COLLECTIBLE) then
-            for item,_ in pairs(collDist) do
-                if (entity.SubType == item.SubType) then
-                    goto continue --skips despawn
-                end
-            end
-
-            despawnItem(entity:ToPickup()) --despawn
-
-            ::continue::
-        end
-    end
-    manuallySpawned = false
-end
-
 ----------------------------------------------
 -- Returns nearest item to the sourceEntity
 ----- @Return: Nearest item
@@ -156,7 +131,7 @@ function BetterVoiding:payNearestItem(sourceEntity)
         return nil
     end
 
-    if (itemPickup.Price ~= 0) then    --Item has price
+    if (itemPickup:IsShopItem()) then    --Item has price
 
         -- Kill entity if it's not the first player
         if (GetPtrHash(sourceEntity) ~= GetPtrHash(Isaac.GetPlayer())) then
@@ -225,14 +200,8 @@ function BetterVoiding:payNearestItem(sourceEntity)
                 return nil
             end
         end
-        -- Exchange item
-        local tempDist = collDist[itemPickup]
-        despawnItem(itemPickup)
-        itemPickup = Isaac.Spawn(itemPickup.Type, itemPickup.Variant, itemPickup.SubType, itemPickup.Position, Vector(0,0), nil):ToPickup()
-        collDist[itemPickup] = tempDist
-
-        -- To fix double spawned items by damocles etc.
-        manuallySpawned = true
+        -- Make item free
+        itemPickup.Price = 0
 
         -- Devildeals only
         if game:GetRoom():GetType() == RoomType.ROOM_DEVIL then
@@ -265,18 +234,10 @@ function BetterVoiding:betterVoidingAllItems(sourceEntity)
     manageAllPickupIndices()
     result = TableEx.copy(collDist)
     for item,_ in pairs(result) do
-        if item.Price ~= 0 then
+        if item:IsShopItem() then
             result[item] = nil
         end
     end
-
-    --[[ --Test
-    debugText = ""
-    result = TableEx.updateTable(result)
-    for key, value in pairs(result) do
-        debugText = debugText .. " 1"
-    end
-    --]]
     return TableEx.updateTable(result)
 end
 
@@ -326,14 +287,6 @@ local function betterVoiding()
     return true
 end
 
--- Function for preventing doubling items when paying them
-local function damoclesFix()
-    if BetterVoiding:manuallySpawnedItem() then
-        despawnAdditionallySpawnedItems()
-    end
-end
-
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Abyss"))
-BetterVoiding:AddCallback(ModCallbacks.MC_POST_UPDATE, damoclesFix, PickupVariant.PICKUP_COLLECTIBLE)
 ---------------------------------------------------------------------------------------------------------

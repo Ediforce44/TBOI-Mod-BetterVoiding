@@ -1,7 +1,6 @@
 -----------------------------
 -- Requiered Modules
 -----------------------------
-require("libs.entityMath")
 require("libs.tableEx")
 
 local BetterVoiding = RegisterMod("Better Voiding", 1)
@@ -26,6 +25,7 @@ BetterVoiding:AddCallback(ModCallbacks.MC_POST_RENDER, BetterVoiding.drawDebugTe
 local game = Game()
 local collDist = {}
 local manuallySpawned = false
+local tYourSoulID = TrinketType.TRINKET_YOUR_SOUL
 
 function BetterVoiding:manuallySpawnedItem()
     return manuallySpawned
@@ -202,11 +202,16 @@ function BetterVoiding:payNearestItem(sourceEntity)
                 playerEntity:AddSoulHearts(-maxHeartsSoul)
 
             elseif itemPrice == PickupPrice.PRICE_SPIKES then
-                return nil
+                playerEntity:TakeDamage(2, DamageFlag.DAMAGE_NO_PENALTIES, EntityRef(itemPickup), 0)
 
             elseif itemPrice == PickupPrice.PRICE_SOUL then
-                -- ?
-                return nil
+                if not playerEntity:HasTrinket(tYourSoulID, false) then
+                    return nil
+                end
+                if tostring(playerEntity:TryRemoveTrinket(tYourSoulID)) then
+                    return nil
+                end
+                playerEntity:TryRemoveTrinketCostume(tYourSoulID)
 
             elseif itemPrice > 0 then
                 local playersCoins = playerEntity:GetNumCoins()
@@ -264,6 +269,14 @@ function BetterVoiding:betterVoidingAllItems(sourceEntity)
             result[item] = nil
         end
     end
+
+    --[[ --Test
+    debugText = ""
+    result = TableEx.updateTable(result)
+    for key, value in pairs(result) do
+        debugText = debugText .. " 1"
+    end
+    --]]
     return TableEx.updateTable(result)
 end
 

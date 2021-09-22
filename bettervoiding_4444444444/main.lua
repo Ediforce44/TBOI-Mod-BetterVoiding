@@ -12,13 +12,26 @@ require("libs.tableEx")
 local BetterVoiding = RegisterMod("Better Voiding", 1)
 
 local game = Game()
+local genesisActive = false
 
 
----------------------------------------------------------------------------------------------------------
--- Determins all collectibles in the current room and their distance to the sourceEntity
+----------------------------------------------------
+-- Test
+local debugText = ""
+
+function BetterVoiding:drawDebugText()
+    Isaac.RenderText(debugText, 50, 50, 255, 0, 0, 255)
+end
+
+BetterVoiding:AddCallback(ModCallbacks.MC_POST_RENDER, BetterVoiding.drawDebugText)
+----------------------------------------------------
+
+---------------------------------------------------------------------------------------------------------------
+-- Determins all collectibles in the current room and their distance to the sourceEntity (default = Player_0)
 ----- @Return: Table of (Keys: Collectibles, Values: Distance between the collectible and sourceEntity)
----------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------
 local function calculateCollDist(sourceEntity)
+    sourceEntity = sourceEntity or Isaac.GetPlayer() --set default value
     local collDist = {}
     local allEntities = Isaac.GetRoomEntities()
 
@@ -42,7 +55,7 @@ local function managePickupIndex(itemPickup)
 
     local index = itemPickup.OptionsPickupIndex
     if index ~= 0 then
-        for item,_ in pairs(calculateCollDist(Isaac.GetPlayer())) do
+        for item,_ in pairs(calculateCollDist()) do
             if (GetPtrHash(item) ~= GetPtrHash(itemPickup) and item.OptionsPickupIndex == index) then
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, item.Position, Vector(0,0), item)
                 item:Remove()
@@ -50,13 +63,7 @@ local function managePickupIndex(itemPickup)
         end
     end
 
-    --[[
-    if itemPickup:IsShopItem() then
-        return nil
-    else
-        return itemPickup
-    end--]]
-    return itemPickup:IsShopItem() and itemPickup or nil
+    return (itemPickup:IsShopItem() and nil) or itemPickup --if shopitem then nil else itemPickup
 end
 
 ---------------------------------------------------------------------------------------------------------------
@@ -223,6 +230,7 @@ end
 function BetterVoiding:betterVoidingNearestItem(sourceEntity)
     local item = BetterVoiding:payItem(BetterVoiding:getNearestItem(sourceEntity), sourceEntity)
 
+    --debugText = tostring(item:IsShopItem())
     return managePickupIndex(item)
 end
 
@@ -240,7 +248,7 @@ end
 --        <<< Including removing item(s) and play animation >>>
 
 ----------------------------------------------------------------------------------
--- Voiding NEAREST item to sourceEntity
+-- Voiding NEAREST item to sourceEntity !!!Doesn't work with genesis!!!
 ----- @Return: CollectibleType/EntitySubtye of nearest item if it could be payed
 ----------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingNearestItemRA(sourceEntity)
@@ -254,10 +262,10 @@ function BetterVoiding:betterVoidingNearestItemRA(sourceEntity)
     return collType
 end
 
--------------------------------------------------------------------------------------------
--- Voiding ALL items next to sourceEntity !!!(pays only nearest item)!!!
+---------------------------------------------------------------------------------------------------------
+-- Voiding ALL items next to sourceEntity !!!(pays only nearest item)!!! !!!Doesn't work with genesis!!!
 ----- @Return: Table of (Values: CollectibleTypes/EntitySubtypes of all voided items)
--------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingAllItemsRA(sourceEntity)
     local items = BetterVoiding:betterVoidingAllItems(sourceEntity)
     local collTypes = {}
@@ -270,27 +278,43 @@ function BetterVoiding:betterVoidingAllItemsRA(sourceEntity)
 end
 
 
-----------------------------------------------------
--- Test
-local debugText = ""
-
-function BetterVoiding:drawDebugText()
-    Isaac.RenderText(debugText, 50, 50, 255, 0, 0, 255)
-end
-
-BetterVoiding:AddCallback(ModCallbacks.MC_POST_RENDER, BetterVoiding.drawDebugText)
-----------------------------------------------------
-
 ---------------------------------------------------------------------------------------------------------
 -- ModCallbacks
 ---------------------------------------------------------------------------------------------------------
 
 -- Function for existing voiding-items and their ModCallbacks
 local function betterVoiding()
-    BetterVoiding:betterVoidingAllItems(Isaac.GetPlayer())
-    return nil
+    local item = BetterVoiding:betterVoidingNearestItem(Isaac.GetPlayer())
+    --[[debugText = ""
+    for key, value in pairs(list) do
+        debugText = debugText .. " " .. tostring(key.OptionsPickupIndex)
+    end]]
+    debugText = tostring(item)
+    return true
+end
+
+-- Fix Genesis as well as possible
+local function genesisActivated()
+    genesisActive = true
+end
+
+local function genesisDeactivated()
+    genesisActive = false
+end
+
+local function genesisFix()
+    if (genesisActive and game:GetRoom():GetType() == RoomType.ROOM_ISAACS) then
+        local list = calculateCollDist()
+        for item,_ in pairs(list) do
+            item.OptionsPickupIndex = 10
+        end
+    end
 end
 
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Abyss"))
+
+BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, genesisActivated, Isaac.GetItemIdByName("Genesis"))
+BetterVoiding:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, genesisDeactivated)
+BetterVoiding:AddCallback(ModCallbacks.MC_POST_PICKUP_UPDATE, genesisFix)
 ---------------------------------------------------------------------------------------------------------

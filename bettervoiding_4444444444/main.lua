@@ -460,14 +460,34 @@ end
 ---------------------------------------------------------------------------------------------------------
 
 -- Function for already existing voiding-items and their ModCallbacks
-local function betterVoiding()
-    local item = BetterVoiding:betterVoidingAllItemsRA(Isaac.GetPlayer())
-    --[[debugText = ""
-    for key, value in pairs(list) do
-        debugText = debugText .. " " .. tostring(key.OptionsPickupIndex)
-    end]]
-    --debugText = tostring(item:GetData()['restockNum'])
-    return true
+local function betterVoiding(_, _, _, playerEntity)
+    playerEntity = playerEntity or Isaac.GetPlayer()
+    BetterVoiding:betterVoidingAllItems(playerEntity)
+    return nil
+end
+
+
+-- Function for already existing voiding-cards/runes and its ModCallback
+local function betterVoidingCard(_, cardType, playerEntity)
+    playerEntity = playerEntity or Isaac.GetPlayer()
+    local playerData = playerEntity:GetData()
+    if playerData['mimicedCard'] then
+        playerData['mimicedCard'] = nil
+    else
+        playerData['mimicedCard'] = true
+        BetterVoiding:betterVoidingAllItems(playerEntity)
+        playerEntity:UseCard(cardType)
+    end
+    return nil
+end
+
+--------------------------------------------------------------------------------------------------------------------------
+-- This function is for already existing mods with voiding-cards. It returns a function for a MC_USE_CARD ModCallback.
+-- The returned functions pays the nearest item and activates the card a second time.
+----- @Return: Function for ModCallbacks
+--------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding:betterVoidingReadyForCards()
+    return betterVoidingCard
 end
 
 -- Fix Genesis as well as possible
@@ -490,6 +510,7 @@ end
 
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Abyss"))
+BetterVoiding:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCard, Card.RUNE_BLACK)
 
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, genesisActivated, Isaac.GetItemIdByName("Genesis"))
 BetterVoiding:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, genesisDeactivated)

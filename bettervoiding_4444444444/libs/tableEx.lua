@@ -8,7 +8,7 @@ TableEx = {}
 -- Removes all entrys with nil values in keyTable
 ----- @Return: New table with updated entries
 ----------------------------------------------------
---       !!! Doesn't obtain Positions !!!
+--   !!! Doesn't obtain positions of entries !!!
 function TableEx.updateTable(keyTable)
     local updatedTable = {}
     for k,v in pairs(keyTable) do

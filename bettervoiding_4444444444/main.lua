@@ -4,6 +4,11 @@
 
 require("libs.tableEx")
 
+-----------------------------------------------------------
+--[[ Reserved Optionindices
+100 = To manage Genesis
+200 = To manage Lost-like characters
+----------------------------------------------------------]]
 
 ----------------------------------------------------------
 -- Global/Local variables and constants and Getter/Setter
@@ -34,151 +39,187 @@ BetterVoiding:AddCallback(ModCallbacks.MC_POST_RENDER, BetterVoiding.drawDebugTe
 ---------------------------------------------------------------------------------------------------------------
 local function calculateCollDist(sourceEntity)
     sourceEntity = sourceEntity or Isaac.GetPlayer() --set default value
-    local collDist = {}
-    local allEntities = Isaac.GetRoomEntities()
+    local collDists = {}
+    local allEntities = BetterVoiding:calculatePickupDist(sourceEntity)
 
-    for _,collEntity in pairs(allEntities) do    -- Filter room for collectibles
-        if (collEntity.Type == EntityType.ENTITY_PICKUP and collEntity.Variant == PickupVariant.PICKUP_COLLECTIBLE
-                and collEntity.SubType ~= CollectibleType.COLLECTIBLE_NULL) then
-            collDist[collEntity:ToPickup()] = sourceEntity.Position:Distance(collEntity.Position)
+    for pickup, dist in pairs(allEntities) do    -- Filter room for collectibles
+        if (pickup.Variant == PickupVariant.PICKUP_COLLECTIBLE and pickup.SubType ~= CollectibleType.COLLECTIBLE_NULL) then
+            collDists[pickup] = dist
         end
     end
-    return collDist
+    return collDists
 end
 
 -------------------------------------------------------------------------
--- Removes all items with the same OptionsPickupIndex as the itemPickup
------ @Retrun: itemPickup if it is payed
+-- Removes all pickups with the same OptionsPickupIndex as the refPickup
+----- @Retrun: refPickup if it is payed
 -------------------------------------------------------------------------
-local function managePickupIndex(itemPickup)
-    if itemPickup == nil then
+local function managePickupIndex(refPickup)
+    if refPickup == nil then
         return nil
     end
 
-    local index = itemPickup.OptionsPickupIndex
+    local index = refPickup.OptionsPickupIndex
     if index ~= 0 then
-        for item,_ in pairs(calculateCollDist()) do
-            if (GetPtrHash(item) ~= GetPtrHash(itemPickup) and item.OptionsPickupIndex == index) then
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, item.Position, Vector(0,0), item)
-                item:Remove()
+        for pickup,_ in pairs(calculateCollDist()) do
+            if (GetPtrHash(pickup) ~= GetPtrHash(refPickup) and pickup.OptionsPickupIndex == index) then
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, pickup.Position, Vector(0,0), item)
+                pickup:Remove()
             end
         end
-        itemPickup.OptionsPickupIndex = 0
+        refPickup.OptionsPickupIndex = 0
     end
 
-    return (itemPickup:IsShopItem() and nil) or itemPickup --if shopitem then nil else itemPickup
+    return (refPickup:IsShopItem() and nil) or refPickup --if shopitem then nil else refPickup
 end
 
----------------------------------------------------------------------------------------------------------------
--- Removes all items with the same OptionsPickupIndex except the nearest items to sourceEntity for each index
------ @Return: Table of (Keys: Items, Values: Distance between the item and sourceEntity)
----------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------
+-- Removes all pickups with the same OptionsPickupIndex except the nearest pickups to sourceEntity for each index
+----- @Return: Table of (Keys: Pickups, Values: Distance between the pickup and sourceEntity)
+-------------------------------------------------------------------------------------------------------------------
 local function manageAllPickupIndices(sourceEntity)
     local indexTables = {}
     local index = 0
-    local remainingItems = {}
+    local remainingPickups = {}
 
-    for item,dist in pairs(calculateCollDist(sourceEntity)) do
-        if item:IsShopItem() then --ignore shop items
+    for pickup,dist in pairs(calculateCollDist(sourceEntity)) do
+        if pickup:IsShopItem() then --ignore shop items
             goto continue
         end
 
-        index = item.OptionsPickupIndex
+        index = pickup.OptionsPickupIndex
         if (index == 0) then      --items without OptionsPickupIndex
-            remainingItems[item] = dist
+            remainingPickups[pickup] = dist
             goto continue
         end
 
         if indexTables[index] == nil then
             indexTables[index] = {}
         end
-        indexTables[item.OptionsPickupIndex][item] = dist
+        indexTables[pickup.OptionsPickupIndex][pickup] = dist
 
         ::continue::
     end
 
     for _,table in pairs(indexTables) do
-        local nearestItem = TableEx.getKeyOfLowestValue(table)
-        remainingItems[nearestItem] = table[nearestItem]
+        local nearestPickup = TableEx.getKeyOfLowestValue(table)
+        remainingPickups[nearestPickup] = table[nearestPickup]
         for item,_ in pairs(table) do
-            if not (item == nearestItem) then
+            if not (item == nearestPickup) then
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, item.Position, Vector(0,0), item)
                 item:Remove()
             end
         end
-        nearestItem.OptionsPickupIndex = 0
+        nearestPickup.OptionsPickupIndex = 0
     end
-    return remainingItems
+    return remainingPickups
+end
+
+----------------------------------------------------------------
+-- Spawns a new pickup in the shop on the position of prePickup
+----- @Return: New pickup
+----------------------------------------------------------------
+local function restockShopPickup(prePickup)
+    local newPickup = nil
+    local pickupType = nil
+
+    if prePickup.Variant == PickupVariant.PICKUP_COLLECTIBLE then
+        pickupType = itemPool:GetCollectible(itemPool:GetPoolForRoom(game:GetRoom():GetType(), seeds:GetNextSeed()), true, seeds:GetStartSeed())
+    elseif prePickup.Variant == PickupVariant.PICKUP_TAROTCARD then
+        pickupType = itemPool:GetCard(seeds:GetNextSeed(), true, true, false)
+    elseif prePickup.Variant == PickupVariant.PICKUP_PILL then
+        pickupType = itemPool:GetPill(seeds:GetNextSeed())
+    else
+        pickupType = prePickup.SubType
+    end
+    newPickup = Isaac.Spawn(prePickup.Type, prePickup.Variant, pickupType, prePickup.Position, Vector(0,0), nil):ToPickup()
+    newPickup:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE | EntityFlag.FLAG_APPEAR)
+    newPickup.ShopItemId = prePickup.ShopItemId
+
+    return newPickup
 end
 
 ----------------------------------------------------------------------------------
--- In Greedmode shops will spawn new items, if the old itemPickup got payed.
--- If itemPickup is not forVoiding, it will be moved next to the new shop item
------ @Return: Payed item
+-- In Greedmode shops will spawn new pickups, if the old pickup got payed.
+-- If pickup is not forVoiding, it will be moved next to the new shop item
+----- @Return: Payed pickup
 ----------------------------------------------------------------------------------
-local function manageGreedShop(itemPickup, forVoiding)
-    local roomType = game:GetRoom():GetType()
-    if (roomType ~= RoomType.ROOM_SHOP) then
-        return itemPickup
+local function manageGreedShop(pickup, forVoiding)
+    if (game:GetRoom():GetType() ~= RoomType.ROOM_SHOP) then
+        return pickup
     end
 
-    local newItem = Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE
-        , itemPool:GetCollectible(itemPool:GetPoolForRoom(roomType, seeds:GetStartSeed()), true, seeds:GetStartSeed()), itemPickup.Position, Vector(0,0), nil):ToPickup()
-    newItem:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE | EntityFlag.FLAG_APPEAR)
-    newItem.ShopItemId = itemPickup.ShopItemId
-    newItem.Price = itemPickup.Price --Price will get updated (important: Price ~= 0)
+    local newPickup = restockShopPickup(pickup)
+    newPickup.Price = pickup.Price --Price will get updated (important: Price ~= 0)
 
     if forVoiding then
-        return itemPickup
+        return pickup
     else
-        return BetterVoiding:clonePickup(itemPickup, true)
+        return BetterVoiding:clonePickup(pickup, true)
     end
 end
 
-------------------------------------------------------------------------------------------------------------------
--- If the player holds 'Restock', new items will spawn in the shop when itemPickup got payed.
--- If itemPickup is not forVoiding, it will be moved next to the new shop item
--- <<< The price doesn't work if and only if: Voiding shop items and then buying them regulary or vice versa>>>
------ @Return: Payed item
-------------------------------------------------------------------------------------------------------------------
-local function manageRestock(itemPickup, forVoiding)
-    local roomType = game:GetRoom():GetType()
-    if (roomType ~= RoomType.ROOM_SHOP or (not Isaac.GetPlayer():HasCollectible(CollectibleType.COLLECTIBLE_RESTOCK))) then
-        return itemPickup
+----------------------------------------------------------------------------------------------------------------------
+-- If the player holds 'Restock', new items will spawn in the shop when pickup got payed.
+-- If pickup is not forVoiding, it will be moved next to the new shop pickup
+-- <<< The price doesn't work if and only if: Voiding shop pickups and then buying pickup regulary or vice versa >>>
+----- @Return: Payed pickup
+----------------------------------------------------------------------------------------------------------------------
+local function manageRestock(pickup, forVoiding)
+    if (game:GetRoom():GetType() ~= RoomType.ROOM_SHOP or (not Isaac.GetPlayer():HasCollectible(CollectibleType.COLLECTIBLE_RESTOCK))) then
+        return pickup
     end
 
-    local itemPickupData = itemPickup:GetData()
-    local newItem = Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE
-        , itemPool:GetCollectible(itemPool:GetPoolForRoom(roomType, seeds:GetStartSeed()), true, seeds:GetStartSeed()), itemPickup.Position, Vector(0,0), nil):ToPickup()
-
-    newItem:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE | EntityFlag.FLAG_APPEAR)
-    newItem.ShopItemId = itemPickup.ShopItemId
+    local pickupData = pickup:GetData()
+    local newPickup = restockShopPickup(pickup)
 
     if Isaac.GetPlayer():HasCollectible(CollectibleType.COLLECTIBLE_POUND_OF_FLESH) then
-        newItem.Price = 1 --Price will get updated (important: Price ~= 0)
+        newPickup.Price = 1 --Price will get updated (important: Price ~= 0)
     else
-        local newItemData = newItem:GetData()
-        if itemPickupData['restockNum'] == nil then
-            newItemData['startingPrice'] = itemPickup.Price
-            newItemData['restockNum'] = 1
+        local newPickupData = newPickup:GetData()
+        if pickupData['restockNum'] == nil then
+            newPickupData['startingPrice'] = pickup.Price
+            newPickupData['restockNum'] = 1
         else
-            newItemData['startingPrice'] = itemPickupData['startingPrice']
-            newItemData['restockNum'] = itemPickupData['restockNum'] + 1
+            newPickupData['startingPrice'] = pickupData['startingPrice']
+            newPickupData['restockNum'] = pickupData['restockNum'] + 1
         end
 
-        newItem.AutoUpdatePrice = false
-        local newPrice = (newItemData['startingPrice'] + (newItemData['restockNum'] * (newItemData['restockNum'] + 1)))
+        newPickup.AutoUpdatePrice = false
+        --Calculate new price
+        local newPrice = (newPickupData['restockNum'] * (newPickupData['restockNum'] + 1))
+        if newPickup.Variant ~= PickupVariant.PICKUP_COLLECTIBLE then
+            newPrice = newPrice / 2
+        end
+        newPrice = newPrice + newPickupData['startingPrice']
         if newPrice > 99 then
             newPrice = 99
         end
-        newItem.Price = newPrice
-        newItemData['Price'] = newPrice
+        newPickup.Price = newPrice
+        newPickupData['Price'] = newPrice
     end
     if forVoiding then
-        return itemPickup
+        return pickup
     else
-        return BetterVoiding:clonePickup(itemPickup, true)
+        return BetterVoiding:clonePickup(pickup, true)
     end
+end
+
+---------------------------------------------------------------------------------------------------------------
+-- Determins all pickups in the current room and their distance to the sourceEntity (default = Player_0)
+----- @Return: Table of (Keys: Pickups, Values: Distance between the pickup and sourceEntity)
+---------------------------------------------------------------------------------------------------------------
+function BetterVoiding:calculatePickupDist(sourceEntity)
+    sourceEntity = sourceEntity or Isaac.GetPlayer() --set default value
+    local pickupDists = {}
+    local allEntities = Isaac.GetRoomEntities()
+
+    for _,collEntity in pairs(allEntities) do    -- Filter room for pickups
+        if (collEntity.Type == EntityType.ENTITY_PICKUP) then
+            pickupDists[collEntity:ToPickup()] = sourceEntity.Position:Distance(collEntity.Position)
+        end
+    end
+    return pickupDists
 end
 
 -----------------------------------------------------------------------------------------
@@ -193,7 +234,7 @@ function BetterVoiding:clonePickup(pickup, cloneAnimation, clonePosition)
 
     if pickup == nil then return nil end
 
-    local pickupClone = Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, pickup.SubType
+    local pickupClone = Isaac.Spawn(EntityType.ENTITY_PICKUP, pickup.Variant, pickup.SubType
         , game:GetRoom():FindFreePickupSpawnPosition(clonePosition), Vector(0,0), nil):ToPickup()
 
     pickupClone:AddEntityFlags(pickup:GetEntityFlags())
@@ -222,28 +263,28 @@ function BetterVoiding:getNearestItem(sourceEntity)
     return TableEx.getKeyOfLowestValue(calculateCollDist(sourceEntity))
 end
 
-------------------------------------------------------------------------------------------------------------------------------------
--- Let sourceEntity (default = Player_0) pay for itemPickup.
--- If the item, which will be payed, is not forVoiding and it's in a restockable shop, it will be moved next to the restocked item
------ @Return: Payed item
-------------------------------------------------------------------------------------------------------------------------------------
-function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- Let sourceEntity (default = Player_0) pay for pickup.
+-- If the pickup, which will be payed, is not forVoiding and it's in a restockable shop, it will be moved next to the restocked pickup
+----- @Return: Payed pickup
+-----------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding:payPickup(pickup, sourceEntity, forVoiding)
     sourceEntity = sourceEntity or Isaac.GetPlayer(0)
     if forVoiding == nil then
         forVoiding = true
     end
 
     local playerEntity = nil
-    local itemPrice = nil
+    local pickupPrice = nil
     local srcEntityIsLostlike = false
 
-    if itemPickup == nil or sourceEntity == nil then
+    if pickup == nil or sourceEntity == nil then
         return nil
     end
 
-    if (itemPickup:IsShopItem()) then
+    if (pickup:IsShopItem()) then
         -- Kill entity if it's not one of the first 4 players
-        for i=0, 3 do
+        for i = 0, 3 do
             if GetPtrHash(sourceEntity) == GetPtrHash(Isaac.GetPlayer(i)) then
                 goto payment
             end
@@ -253,17 +294,17 @@ function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
 
         ::payment::
         playerEntity = sourceEntity:ToPlayer()
-        itemPrice = itemPickup.Price
+        pickupPrice = pickup.Price
         srcEntityIsLostlike = (playerEntity:GetSoulHearts() == 1 and playerEntity:GetMaxHearts() == 0)
 
-        -- Player pays price for the item if he can
-        if itemPrice == PickupPrice.PRICE_ONE_HEART then
+        -- Player pays price for the pickup if he can
+        if pickupPrice == PickupPrice.PRICE_ONE_HEART then
             if playerEntity:GetMaxHearts() < 2 then
                 return nil
             end
             playerEntity:AddMaxHearts(-2)
 
-        elseif itemPrice == PickupPrice.PRICE_TWO_HEARTS then
+        elseif pickupPrice == PickupPrice.PRICE_TWO_HEARTS then
             local maxHearts = playerEntity:GetMaxHearts()
             if maxHearts < 2 then
                 return nil
@@ -272,7 +313,7 @@ function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
             end
             playerEntity:AddMaxHearts(-maxHearts)
 
-        elseif itemPrice == PickupPrice.PRICE_THREE_SOULHEARTS then
+        elseif pickupPrice == PickupPrice.PRICE_THREE_SOULHEARTS then
             local maxHeartsSoul = playerEntity:GetSoulHearts()
             if maxHeartsSoul < 1 then
                 return nil
@@ -281,7 +322,7 @@ function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
             end
             playerEntity:AddSoulHearts(-maxHeartsSoul)
 
-        elseif itemPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
+        elseif pickupPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
             local maxHearts = playerEntity:GetMaxHearts()
             local maxHeartsSoul = playerEntity:GetSoulHearts()
             if maxHearts < 2 then
@@ -292,23 +333,23 @@ function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
             playerEntity:AddMaxHearts(-maxHearts)
             playerEntity:AddSoulHearts(-maxHeartsSoul)
 
-        elseif itemPrice == PickupPrice.PRICE_SPIKES then
+        elseif pickupPrice == PickupPrice.PRICE_SPIKES then
             --Pay price
             if not srcEntityIsLostlike then
-                playerEntity:TakeDamage(2, DamageFlag.DAMAGE_NO_PENALTIES, EntityRef(itemPickup), 0)
+                playerEntity:TakeDamage(2, DamageFlag.DAMAGE_NO_PENALTIES, EntityRef(pickup), 0)
             end
             --Handle spike animation
             local entityList = Isaac.GetRoomEntities()
             for _,entity in pairs(entityList) do
                 if entity.Type == EntityType.ENTITY_EFFECT and entity.Variant == EffectVariant.SHOP_SPIKES then
-                    if entity.Position.X == itemPickup.Position.X and entity.Position.Y == itemPickup.Position.Y then
+                    if entity.Position.X == pickup.Position.X and entity.Position.Y == pickup.Position.Y then
                         Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.SHOP_SPIKES, 1, entity.Position, Vector(0,0), nil)
                         entity:Remove()
                     end
                 end
             end
 
-        elseif itemPrice == PickupPrice.PRICE_SOUL then
+        elseif pickupPrice == PickupPrice.PRICE_SOUL then
             if not playerEntity:HasTrinket(TrinketType.TRINKET_YOUR_SOUL, false) then
                 return nil
             end
@@ -317,12 +358,12 @@ function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
             end
             playerEntity:TryRemoveTrinketCostume(TrinketType.TRINKET_YOUR_SOUL)
 
-        elseif itemPrice > 0 then
+        elseif pickupPrice > 0 then
             local playersCoins = playerEntity:GetNumCoins()
-            if (itemPrice > playersCoins) then
+            if (pickupPrice > playersCoins) then
                 return nil
             else
-                playerEntity:AddCoins(-itemPrice)
+                playerEntity:AddCoins(-pickupPrice)
             end
 
         else
@@ -331,25 +372,25 @@ function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
 
         ::payed::
 
-        --itemPickup = manageRestock(itemPickup, forVoiding) --doesn't work as intended
+        --pickup = manageRestock(pickup, forVoiding) --doesn't work as intended
 
         -- Manages items for TheLost-like characters
         if srcEntityIsLostlike then
             for item,_ in  pairs(calculateCollDist()) do
                if (item.Price == PickupPrice.PRICE_THREE_SOULHEARTS or item.Price == PickupPrice.PRICE_SPIKES) then
-                    item.OptionsPickupIndex = 200
+                    item.OptionsPickupIndex = 100
                 end
             end
-            managePickupIndex(itemPickup) --removes other soulheart or spike deals in this room
+            managePickupIndex(pickup) --removes other soulheart or spike deals in this room
         end
 
         -- Manages shop restocks in Greedmode
         if game:IsGreedMode() then
-            itemPickup = manageGreedShop(itemPickup, forVoiding)
+            pickup = manageGreedShop(pickup, forVoiding)
         end
 
-        -- Make item free
-        itemPickup.Price = 0
+        -- Make pickup free
+        pickup.Price = 0
 
         -- Devildeals only
         if game:GetRoom():GetType() == RoomType.ROOM_DEVIL then
@@ -357,36 +398,36 @@ function BetterVoiding:payItem(itemPickup, sourceEntity, forVoiding)
         end
     end
 
-    return itemPickup --return payed item
+    return pickup --return payed pickup
 end
 
 ------------------------------------------------------------------
--- Prepares everything for voiding NEAREST item to sourceEntity
------ @Return: Nearest item if it could be payed
+-- Prepares everything for voiding NEAREST collectible to sourceEntity
+----- @Return: Nearest collectible if it could be payed
 ------------------------------------------------------------------
 function BetterVoiding:betterVoidingNearestItem(sourceEntity)
-    local item = BetterVoiding:payItem(BetterVoiding:getNearestItem(sourceEntity), sourceEntity)
+    local item = BetterVoiding:payPickup(BetterVoiding:getNearestItem(sourceEntity), sourceEntity)
 
     return managePickupIndex(item)
 end
 
--------------------------------------------------------------------------------------------------
--- Prepares everything for voiding ALL items next to sourceEntity !!!(pays only nearest item)!!!
------ @Return: Table of (Keys: remaining voidable items, Values: Distance to sourceEntity)
--------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------
+-- Prepares everything for voiding ALL collectibles next to sourceEntity !!!(pays only nearest collectible)!!!
+----- @Return: Table of (Keys: Remaining voidable collectibles, Values: Distance to sourceEntity)
+-----------------------------------------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingAllItems(sourceEntity)
-    BetterVoiding:payItem(BetterVoiding:getNearestItem(sourceEntity), sourceEntity)
+    BetterVoiding:payPickup(BetterVoiding:getNearestItem(sourceEntity), sourceEntity)
 
     return manageAllPickupIndices(sourceEntity)
 end
 
 
---        <<< Including removing item(s) and play animation >>>
+--        <<< Including removing collectible(s) and play animation >>>
 
-----------------------------------------------------------------------------------
--- Voiding NEAREST item to sourceEntity !!!Doesn't work with genesis!!!
------ @Return: CollectibleType/EntitySubtye of nearest item if it could be payed
-----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
+-- Voiding NEAREST collectible to sourceEntity !!!Doesn't work with genesis!!!
+----- @Return: CollectibleType/EntitySubtye of nearest collectible if it could be payed
+-----------------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingNearestItemRA(sourceEntity)
     local item = BetterVoiding:betterVoidingNearestItem(sourceEntity)
     local collType = nil
@@ -398,10 +439,10 @@ function BetterVoiding:betterVoidingNearestItemRA(sourceEntity)
     return collType
 end
 
----------------------------------------------------------------------------------------------------------
--- Voiding ALL items next to sourceEntity !!!(pays only nearest item)!!! !!!Doesn't work with genesis!!!
------ @Return: Table of (Values: CollectibleTypes/EntitySubtypes of all voided items)
----------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+-- Voiding ALL collectibles next to sourceEntity !!!(pays only nearest collectible)!!! !!!Doesn't work with genesis!!!
+----- @Return: Table of (Values: CollectibleTypes/EntitySubtypes of all voided collectibles)
+------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingAllItemsRA(sourceEntity)
     local items = BetterVoiding:betterVoidingAllItems(sourceEntity)
     local collTypes = {}
@@ -418,10 +459,9 @@ end
 -- ModCallbacks
 ---------------------------------------------------------------------------------------------------------
 
--- Function for existing voiding-items and their ModCallbacks
+-- Function for already existing voiding-items and their ModCallbacks
 local function betterVoiding()
-    Isaac.GetPlayer():TakeDamage(2, DamageFlag.DAMAGE_NO_PENALTIES, EntityRef(Isaac.GetPlayer()), 0)
-    local item = BetterVoiding:payItem(BetterVoiding:getNearestItem(Isaac.GetPlayer()),Isaac.GetPlayer(), false)--BetterVoiding:betterVoidingAllItemsRA(Isaac.GetPlayer())
+    local item = BetterVoiding:betterVoidingAllItemsRA(Isaac.GetPlayer())
     --[[debugText = ""
     for key, value in pairs(list) do
         debugText = debugText .. " " .. tostring(key.OptionsPickupIndex)
@@ -443,7 +483,7 @@ local function genesisFix()
     if (genesisActive and game:GetRoom():GetType() == RoomType.ROOM_ISAACS) then
         local list = calculateCollDist()
         for item,_ in pairs(list) do
-            item.OptionsPickupIndex = 10
+            item.OptionsPickupIndex = 200
         end
     end
 end

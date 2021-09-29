@@ -227,12 +227,11 @@ end
 ----- @Return: Cloned pickup
 -----------------------------------------------------------------------------------------
 function BetterVoiding:clonePickup(pickup, cloneAnimation, clonePosition)
+    if pickup == nil then return nil end
     if cloneAnimation == nil then
         cloneAnimation = true
     end
     clonePosition = clonePosition or pickup.Position
-
-    if pickup == nil then return nil end
 
     local pickupClone = Isaac.Spawn(EntityType.ENTITY_PICKUP, pickup.Variant, pickup.SubType
         , game:GetRoom():FindFreePickupSpawnPosition(clonePosition), Vector(0,0), nil):ToPickup()
@@ -255,12 +254,87 @@ function BetterVoiding:clonePickup(pickup, cloneAnimation, clonePosition)
     return pickupClone
 end
 
-----------------------------------------------
--- Returns nearest item to the sourceEntity
+-------------------------------------------------------------------
+-- Returns nearest item to the sourceEntity (default = Player_0)
 ----- @Return: Nearest item
-----------------------------------------------
+-------------------------------------------------------------------
 function BetterVoiding:getNearestItem(sourceEntity)
+    sourceEntity = sourceEntity or Isaac.GetPlayer() --set default value
     return TableEx.getKeyOfLowestValue(calculateCollDist(sourceEntity))
+end
+
+-------------------------------------------------------------------------
+-- Returns nearest payable item to the sourceEntity (default = Player_0)
+----- @Return: Nearest payable item
+-------------------------------------------------------------------------
+function BetterVoiding:getNearestPayableItem(sourceEntity)
+    sourceEntity = sourceEntity or Isaac.GetPlayer() --set default value
+    local itemList = calculateCollDist(sourceEntity)
+    local item = TableEx.getKeyOfLowestValue(itemList)
+
+    while item ~= nil do
+        if BetterVoiding:isPickupPayable(item, sourceEntity) then
+            return item
+        else
+            itemList[item] = nil
+            itemList = TableEx.updateTable(itemList)
+            item = TableEx.getKeyOfLowestValue(itemList)
+        end
+    end
+    return nil
+end
+
+--------------------------------------------------------------------------
+-- Returns if the pickup is payable by sourceEntity (default = Player_0)
+----- @Return: True if the sourceEntity can pay pickup, False otherwise
+--------------------------------------------------------------------------
+function BetterVoiding:isPickupPayable(pickup, sourceEntity)
+    if pickup == nil then return false end
+    sourceEntity = sourceEntity or Isaac.GetPlayer(0)
+
+    if (pickup:IsShopItem()) then
+        -- Item is always payable if sourceEntity is not one of the first 4 players
+        local sourceEntityIsPlayer = false
+        for i = 0, 3 do
+            if GetPtrHash(sourceEntity) == GetPtrHash(Isaac.GetPlayer(i)) then
+                sourceEntityIsPlayer = true
+            end
+        end
+
+        if sourceEntityIsPlayer then
+            local playerEntity = sourceEntity:ToPlayer()
+            local pickupPrice = pickup.Price
+
+            -- Player pays price for the pickup if he can
+            if pickupPrice == PickupPrice.PRICE_ONE_HEART then
+                if playerEntity:GetMaxHearts() < 2 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_TWO_HEARTS then
+                if playerEntity:GetMaxHearts() < 2 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_THREE_SOULHEARTS then
+                if playerEntity:GetSoulHearts() < 1 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
+                if playerEntity:GetMaxHearts() < 2 or playerEntity:GetSoulHearts() < 2 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_SOUL then
+                if not playerEntity:HasTrinket(TrinketType.TRINKET_YOUR_SOUL, false) then
+                    return false
+                end
+            elseif pickupPrice > 0 then
+                if (playerEntity:GetNumCoins() < pickupPrice) then
+                    return false
+                end
+            end
+        end
+    end
+
+    return true
 end
 
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -269,6 +343,7 @@ end
 ----- @Return: Payed pickup
 -----------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding:payPickup(pickup, sourceEntity, forVoiding)
+    if pickup == nil then return nil end
     sourceEntity = sourceEntity or Isaac.GetPlayer(0)
     if forVoiding == nil then
         forVoiding = true
@@ -277,10 +352,6 @@ function BetterVoiding:payPickup(pickup, sourceEntity, forVoiding)
     local playerEntity = nil
     local pickupPrice = nil
     local srcEntityIsLostlike = false
-
-    if pickup == nil or sourceEntity == nil then
-        return nil
-    end
 
     if (pickup:IsShopItem()) then
         -- Kill entity if it's not one of the first 4 players
@@ -325,7 +396,7 @@ function BetterVoiding:payPickup(pickup, sourceEntity, forVoiding)
         elseif pickupPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
             local maxHearts = playerEntity:GetMaxHearts()
             local maxHeartsSoul = playerEntity:GetSoulHearts()
-            if maxHearts < 2 then
+            if maxHearts < 2 or maxHeartsSoul < 2 then
                 return nil
             elseif maxHeartsSoul > 4 then
                 maxHeartsSoul = 4
@@ -374,14 +445,18 @@ function BetterVoiding:payPickup(pickup, sourceEntity, forVoiding)
 
         --pickup = manageRestock(pickup, forVoiding) --doesn't work as intended
 
+        -- Manages OptionsPickupIndex of the pickup
+        managePickupIndex(pickup)
+
         -- Manages items for TheLost-like characters
         if srcEntityIsLostlike then
             for item,_ in  pairs(calculateCollDist()) do
-               if (item.Price == PickupPrice.PRICE_THREE_SOULHEARTS or item.Price == PickupPrice.PRICE_SPIKES) then
+                --removes other soulheart or spike deals in this room on next call of managePickupIndex
+                if (item.Price == PickupPrice.PRICE_THREE_SOULHEARTS or item.Price == PickupPrice.PRICE_SPIKES) then
                     item.OptionsPickupIndex = 100
                 end
             end
-            managePickupIndex(pickup) --removes other soulheart or spike deals in this room
+            managePickupIndex(pickup)
         end
 
         -- Manages shop restocks in Greedmode
@@ -401,22 +476,22 @@ function BetterVoiding:payPickup(pickup, sourceEntity, forVoiding)
     return pickup --return payed pickup
 end
 
-------------------------------------------------------------------
--- Prepares everything for voiding NEAREST collectible to sourceEntity
------ @Return: Nearest collectible if it could be payed
-------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
+-- Prepares everything for voiding NEAREST PAYABLE collectible to sourceEntity (default = Player_0)
+----- @Return: Nearest collectible which could be payed
+-----------------------------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingNearestItem(sourceEntity)
-    local item = BetterVoiding:payPickup(BetterVoiding:getNearestItem(sourceEntity), sourceEntity)
+    local item = BetterVoiding:payPickup(BetterVoiding:getNearestPayableItem(sourceEntity), sourceEntity)
 
     return managePickupIndex(item)
 end
 
------------------------------------------------------------------------------------------------------------------
--- Prepares everything for voiding ALL collectibles next to sourceEntity !!!(pays only nearest collectible)!!!
+--------------------------------------------------------------------------------------------------------------------------------------------
+-- Prepares everything for voiding ALL collectibles next to sourceEntity (default = Player_0) !!!(pays only nearest payable collectible)!!!
 ----- @Return: Table of (Keys: Remaining voidable collectibles, Values: Distance to sourceEntity)
------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingAllItems(sourceEntity)
-    BetterVoiding:payPickup(BetterVoiding:getNearestItem(sourceEntity), sourceEntity)
+    BetterVoiding:payPickup(BetterVoiding:getNearestPayableItem(sourceEntity), sourceEntity)
 
     return manageAllPickupIndices(sourceEntity)
 end
@@ -468,7 +543,7 @@ end
 
 
 -- Function for already existing voiding-cards/runes and its ModCallback
-local function betterVoidingCard(_, cardType, playerEntity)
+local function betterVoidingCards(_, cardType, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
     local playerData = playerEntity:GetData()
     if playerData['mimicedCard'] then
@@ -481,14 +556,39 @@ local function betterVoidingCard(_, cardType, playerEntity)
     return nil
 end
 
+--[[ Test
+local targetSprite = nil
+local framCount = 0
+-- Test
+local function bv()
+    local playerEntity = Isaac.GetPlayer()
+    --BetterVoiding:betterVoidingAllItems(playerEntity)
+    local item = BetterVoiding:getNearestItem(playerEntity)
+    if targetSprite == nil then
+        targetSprite = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.TARGET, 0, item.Position, Vector(0,0), nil):GetSprite()
+        targetSprite.Scale = Vector(1.5, 2)
+        targetSprite.PlaybackSpeed = 0.1
+    end
+    if (not targetSprite:IsPlaying("Line")) then
+        framCount = math.floor(game:GetFrameCount()/30)
+        targetSprite:Play("Line", true)
+    end
+    return true
+end
+BetterVoiding:AddCallback(ModCallbacks.MC_POST_UPDATE, bv)--]]
+
 --------------------------------------------------------------------------------------------------------------------------
 -- This function is for already existing mods with voiding-cards. It returns a function for a MC_USE_CARD ModCallback.
 -- The returned functions pays the nearest item and activates the card a second time.
 ----- @Return: Function for ModCallbacks
 --------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding:betterVoidingReadyForCards()
-    return betterVoidingCard
+    return betterVoidingCards
 end
+
+BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))
+BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Abyss"))
+BetterVoiding:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, Card.RUNE_BLACK)
 
 -- Fix Genesis as well as possible
 local function genesisActivated()
@@ -507,10 +607,6 @@ local function genesisFix()
         end
     end
 end
-
-BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))
-BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Abyss"))
-BetterVoiding:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCard, Card.RUNE_BLACK)
 
 BetterVoiding:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, genesisActivated, Isaac.GetItemIdByName("Genesis"))
 BetterVoiding:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, genesisDeactivated)

@@ -1,7 +1,9 @@
 ------------------------------------------
 -- Local/Global variables and constants
 ------------------------------------------
-TableEx = {}
+
+-- Global access to this lib
+TableEx = {version = "1.0"}
 
 
 ----------------------------------------------------

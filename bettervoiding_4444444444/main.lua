@@ -24,6 +24,33 @@ local genesisActive = false
 -- To access BetterVoiding functions from outside this mod
 BetterVoiding = {version = "1.0"}
 
+-- TODO
+BetterVoiding.VoidingFlags = {
+    ALL_FREE = 1<<0,
+    NEAREST = 1<<1,
+    NEAREST_PAYABLE = 1<<2,
+    ONLY_SHOP = 1<<3,
+    ONLY_DEVIL = 1<<4
+}
+
+-- Standard values for voiding items
+local colorStd = Color(0.5,0.5,0.5,1,0,0,0)
+local voidingFlagsStd = BetterVoiding.VoidingFlags.ALL_FREE & BetterVoiding.VoidingFlags.NEAREST_PAYABLE
+
+-- TODO
+local voidingColls = {
+    TYPE={CollectibleType.COLLECTIBLE_VOID, CollectibleType.COLLECTIBLE_ABYSS},
+    COLOR={Color(0.4,0.32,0.4,0.9,0,0,0), Color(0.8,0.1,0.1,0.9,0,0,0)},
+    VOIDING_FLAGS={voidingFlagsStd, voidingFlagsStd},
+    COUNT=2
+}
+local voidingCards = {
+    TYPE={Card.RUNE_BLACK},
+    COLOR={Color(0.1,0.1,0.1,0.9,0,0,0)},
+    VOIDING_FLAGS={voidingFlagsStd},
+    COUNT=1
+}
+
 ----------------------------------------------------
 -- Test
 local debugText = ""
@@ -531,6 +558,35 @@ function BetterVoiding.betterVoidingAllItemsRA(sourceEntity)
     return collTypes
 end
 
+--------------------
+-- TODO
+-------------------
+function BetterVoiding.addVoidingColl(collectibleType, voidingColor, voidingFlags)
+    if collectibleType == nil then return end
+    voidingColor = voidingColor or colorStd
+    voidingFlags = voidingFlags or voidingFlagsStd
+
+    table.insert(voidingColls.TYPE, collectibleType)
+    table.insert(voidingColls.COLOR, voidingColor)
+    table.insert(voidingCards.VOIDING_FLAGS, voidingFlags)
+    voidingColls.COUNT = voidingColls.COUNT + 1
+    return
+end
+
+-------------------
+-- TODO
+--------------------
+function BetterVoiding.addVoidingCard(cardType, voidingColor, voidingFlags)
+    if cardType == nil then return end
+    voidingColor = voidingColor or colorStd
+    voidingFlags = voidingFlags or voidingFlagsStd
+
+    table.insert(voidingCards.TYPE, cardType)
+    table.insert(voidingCards.COLOR, voidingColor)
+    table.insert(voidingCards.VOIDING_FLAGS, voidingFlags)
+    voidingCards.COUNT = voidingCards.COUNT + 1
+    return
+end
 
 ---------------------------------------------------------------------------------------------------------
 -- ModCallbacks
@@ -558,27 +614,6 @@ local function betterVoidingCards(_, cardType, playerEntity)
     return nil
 end
 
---[[ Test
-local targetSprite = nil
-local framCount = 0
--- Test
-local function bv()
-    local playerEntity = Isaac.GetPlayer()
-    --BetterVoiding.betterVoidingAllItems(playerEntity)
-    local item = BetterVoiding.getNearestItem(playerEntity)
-    if targetSprite == nil then
-        targetSprite = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.TARGET, 0, item.Position, Vector(0,0), nil):GetSprite()
-        targetSprite.Scale = Vector(1.5, 2)
-        targetSprite.PlaybackSpeed = 0.1
-    end
-    if (not targetSprite:IsPlaying("Line")) then
-        framCount = math.floor(game:GetFrameCount()/30)
-        targetSprite:Play("Line", true)
-    end
-    return true
-end
-modBV:AddCallback(ModCallbacks.MC_POST_UPDATE, bv)--]]
-
 --------------------------------------------------------------------------------------------------------------------------
 -- This function is for already existing mods with voiding-cards. It returns a function for a MC_USE_CARD ModCallback.
 -- The returned functions pays the nearest item and activates the card a second time.
@@ -591,6 +626,97 @@ end
 modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Void"))
 modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoiding, Isaac.GetItemIdByName("Abyss"))
 modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, Card.RUNE_BLACK)
+
+
+
+----------------------------
+-- TODO
+----------------------------
+local function spawnPreVoidingAnimation(color, parentItem)
+    
+end
+
+----------------------------
+-- TODO
+----------------------------
+local function handleVoidingFlags(color, flags)
+    local handledItems = {}
+    local item = nil
+    if (flags & BetterVoiding.VoidingFlags.NEAREST) == 0 then
+        item = BetterVoiding.getNearestItem()
+    end
+    if (flags & BetterVoiding.VoidingFlags.NEAREST_PAYABLE) == 0 then
+        item = BetterVoiding.getNearestPayableItem()
+    end
+    -- ONLY_DEVIL and ONLY_SHOP flags get handled in getNearestItem and getNearestPayableItem
+    if item ~= nil then
+        table.insert(handledItems, item)
+        spawnPreVoidingAnimation(color, item)
+    end
+    if (flags & BetterVoiding.VoidingFlags.ALL_FREE) == 0 then
+        for coll, _ in pairs(calculateCollDist()) do
+            if (coll.Price == 0 and GetPtrHash(coll) ~= GetPtrHash(item)) then
+                table.insert(handledItems, coll)
+                spawnPreVoidingAnimation(color, coll)
+            end
+        end
+    end
+end
+
+----------------------------
+-- TODO
+----------------------------
+local function voidingAnimation() -- PreVoiding animations will be removed if the corresponding item is removed
+    local player = Isaac.GetPlayer()
+    local activeItemType = player:GetActiveItem(ActiveSlot.SLOT_POCKET)
+    if (activeItemType == 0 or player:NeedsCharge(ActiveSlot.SLOT_POCKET)) then
+        activeItemType = player:GetActiveItem()
+        if (activeItemType == 0 or player:NeedsCharge()) then
+            return
+        end
+    end
+
+    for i=1, voidingColls.COUNT do
+        if voidingColls.TYPE[i] == activeItemType then
+            handleVoidingFlags(voidingColls.COLOR[i], voidingColls.VOIDING_FLAGS[i])
+            return
+        end
+    end
+
+    activeItemType = player:GetCard(0)
+    for i=1, voidingCards.COUNT do
+        if voidingColls.TYPE[i] == activeItemType then
+            handleVoidingFlags(voidingCards.COLOR[i], voidingCards.VOIDING_FLAGS[i])
+            return
+        end
+    end
+end
+
+modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_RENDER, voidingAnimation, PickupVariant.PICKUP_COLLECTIBLE)
+
+--[[
+local mark = nil
+local sprite = nil
+local i = 1
+local function bvt3()
+    i = i + 1
+    debugText = i
+    if (sprite == nil or (not sprite:IsPlaying("Mark1"))) then
+        local item = BetterVoiding.getNearestItem(Isaac.GetPlayer())
+        if mark ~= nil then mark:Remove() end
+        if item == nil then return end
+        mark = Isaac.Spawn(EntityType.ENTITY_EFFECT, Isaac.GetEntityVariantByName("BV Item Marks"), 0, item.Position, Vector(0,0), item)
+        sprite = mark:GetSprite()
+        sprite.PlaybackSpeed = 0.8
+        sprite.Scale = Vector(1,1.2)
+        --sprite.Color = Color(0.1,0.1,0.1,0.9,0,0,0)
+        --sprite.Color = Color(0.8,0.1,0.1,0.9,0,0,0)
+        sprite.Color = voidingColls.COLOR[2]
+        sprite:Play("Mark1", true)
+    end
+end
+modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_RENDER, bvt3, PickupVariant.PICKUP_COLLECTIBLE)--]]
+
 
 -- Fix Genesis as well as possible
 local function genesisActivated()

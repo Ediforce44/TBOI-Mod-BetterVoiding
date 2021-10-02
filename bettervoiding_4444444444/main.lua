@@ -630,12 +630,12 @@ end
 -------------------
 -- TODO
 --------------------
-function BetterVoiding.addVoidingPill(pillType, voidingColor, voidingFlags)
-    if pillType == nil then return end
+function BetterVoiding.addVoidingPill(pillEffectType, voidingColor, voidingFlags)
+    if pillEffectType == nil then return end
     voidingColor = voidingColor or colorStd
     voidingFlags = voidingFlags or voidingFlagsStd
 
-    table.insert(voidingPills.TYPE, pillType)
+    table.insert(voidingPills.TYPE, pillEffectType)
     table.insert(voidingPills.COLOR, voidingColor)
     table.insert(voidingPills.VOIDING_FLAGS, voidingFlags)
     voidingPills.COUNT = voidingPills.COUNT + 1
@@ -759,7 +759,7 @@ local function preVoidingAnimation() -- PreVoiding animations will be removed if
         end
     end
 
-    activeItemType = player:GetPill(0)
+    activeItemType = itemPool:GetPillEffect(player:GetPill(0))
     for i=1, voidingPills.COUNT do
         if voidingPills.TYPE[i] == activeItemType then
             handleVoidingFlags(voidingPills.COLOR[i], voidingPills.VOIDING_FLAGS[i])

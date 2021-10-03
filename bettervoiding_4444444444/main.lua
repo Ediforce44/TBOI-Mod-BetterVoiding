@@ -22,7 +22,7 @@ local seeds = game:GetSeeds()
 local genesisActive = false
 
 local preVoidingAnmEntitys = {}
-local preVoidingAnmSpites = {}
+local preVoidingAnmSprites = {}
 
 -- To access BetterVoiding functions from outside this mod
 BetterVoiding = {version = "1.0"}
@@ -746,20 +746,23 @@ modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_UPDATE, genesisFix)
 ----------------------------
 local function spawnPreVoidingAnimation(color, parentItem)
     local preVoidingEntity = preVoidingAnmEntitys[GetPtrHash(parentItem)]
-    local preVoidingSprite = preVoidingAnmSpites[GetPtrHash(parentItem)]
+    local preVoidingSprite = nil
 
-    if ((preVoidingEntity == nil) or (not preVoidingSprite:IsPlaying("Mark1"))) then
-        if preVoidingEntity ~= nil then preVoidingEntity:Remove() end
-        preVoidingEntity = Isaac.Spawn(EntityType.ENTITY_EFFECT, Isaac.GetEntityVariantByName("BV Item Marks"), 0, parentItem.Position, Vector(0,0), parentItem)
-        preVoidingAnmEntitys[GetPtrHash(parentItem)] = preVoidingEntity
+    --Remove old animation entity
+    if preVoidingEntity ~= nil then preVoidingEntity:Remove() end
 
-        preVoidingSprite = preVoidingEntity:GetSprite()
-        preVoidingSprite.PlaybackSpeed = 0.9
-        preVoidingSprite.Scale = Vector(1, 1.2)
-        preVoidingSprite.Color = color
-        preVoidingSprite:Play("Mark1", true)
-        preVoidingAnmSpites[GetPtrHash(parentItem)] = preVoidingSprite
-    end
+    -- Spawn new one
+    preVoidingEntity = Isaac.Spawn(EntityType.ENTITY_EFFECT, Isaac.GetEntityVariantByName("BV Item Marks"), 0, parentItem.Position, Vector(0,0), parentItem)
+    preVoidingAnmEntitys[GetPtrHash(parentItem)] = preVoidingEntity
+
+    -- Configure sprite
+    preVoidingSprite = preVoidingEntity:GetSprite()
+    preVoidingSprite.PlaybackSpeed = 0.9
+    preVoidingSprite.Scale = Vector(1, 1.2)
+    preVoidingSprite.Color = color
+    preVoidingSprite:Play("Mark1", true)
+    preVoidingAnmSprites[GetPtrHash(parentItem)] = preVoidingSprite
+
 end
 
 ----------------------------
@@ -786,7 +789,7 @@ local function preVoidingAnimation() -- PreVoiding animations will be removed if
                     if (itemType == 0) then
                         betterVoidingItemType = BetterVoiding.VoidingItemTypes.TYPE_COLLECTIBLE
                         itemType = player:GetActiveItem()                                   --Check item in ActiveSlot
-                        if (itemType == 0) then
+                        if (itemType == 0) or (player:NeedsCharge()) then
                             goto skipThisPlayer
                         end
                     end
@@ -799,6 +802,11 @@ local function preVoidingAnimation() -- PreVoiding animations will be removed if
                 if betterVoidingItemTable.TYPE[i] == itemType then
                     allColls = managePickupIndices(player, betterVoidingItemTable.V_FLAGS[i], betterVoidingItemTable.IC_FLAGS[i])
                     for item, _ in pairs(allColls[1]) do
+                        if (preVoidingAnmSprites[GetPtrHash(item)] ~= nil) and (preVoidingAnmSprites[GetPtrHash(item)]:IsPlaying("Mark1")) then
+                            return
+                        end
+                    end
+                    for item, _ in pairs(allColls[1]) do
                         spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[i], item)
                     end
                     return
@@ -809,5 +817,11 @@ local function preVoidingAnimation() -- PreVoiding animations will be removed if
     end
 end
 
+local function resetPreVoidingAnimations()
+    preVoidingAnmEntitys = {}
+    preVoidingAnmSprites = {}
+end
+
 modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_RENDER, preVoidingAnimation, PickupVariant.PICKUP_COLLECTIBLE)
+modBV:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, resetPreVoidingAnimations)
 ---------------------------------------------------------------------------------------------------------

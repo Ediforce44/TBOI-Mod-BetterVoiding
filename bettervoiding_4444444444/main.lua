@@ -93,7 +93,7 @@ local function calculateCollDist(sourceEntity, flagsIC)
     sourceEntity = sourceEntity or Isaac.GetPlayer() --set default value
     flagsIC = flagsIC or STD_FLAGS_IC
 
-    local allEntities = BetterVoiding.calculatePickupDist(sourceEntity)
+    local allEntities = BetterVoiding.calculatePickupDist(sourceEntity, flagsIC)
     local collDists = {}
 
     for pickup, dist in pairs(allEntities) do    -- Filter room for collectibles
@@ -124,13 +124,13 @@ local function managePickupIndices(sourceEntity, flagsV, flagsIC)
                     if pickup.OptionsPickupIndex == index then
                         if not (GetPtrHash(pickup) == GetPtrHash(nearestPickup)) then
                             otherPickups[pickup] = dist
-                        else
-                            voidingPickups[nearestPickup] = sourceEntity.Position:Distance(nearestPickup.Position)
                         end
                         remainingPickups[pickup] = nil
                     end
                 end
             end
+            voidingPickups[nearestPickup] = sourceEntity.Position:Distance(nearestPickup.Position)
+            remainingPickups[nearestPickup] = nil
         end
         remainingPickups = TableEx.updateTable(remainingPickups)
     end
@@ -165,6 +165,23 @@ local function managePickupIndices(sourceEntity, flagsV, flagsIC)
     end
 
     return {voidingPickups, otherPickups}
+end
+
+----------------------------------
+-- TODO
+-----------------------------------
+local function manageOnePickupIndexRA(refPickup)
+    if refPickup == nil then
+        return nil
+    end
+    local indexPickups = managePickupIndices(refPickup, BetterVoiding.VoidingFlags.V_NEAREST_ITEM)
+    for pickup, _ in pairs(indexPickups[2]) do
+        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, pickup.Position, Vector(0,0), pickup)
+        pickup:Remove()
+    end
+    refPickup.OptionsPickupIndex = 0
+
+    return refPickup
 end
 
 ----------------------------------------------------------------
@@ -273,7 +290,7 @@ local function getLookUpTableForICFlags(flagsIC)
     flagsLUT[PickupPrice.PRICE_FREE] = false
 
     if (flagsIC == BetterVoiding.ItemCategoryFlags.IC_ALL_ITEMS) then
-        flagsIC = -1 --Activate all flags
+        flagsIC = -1 --Activate all flags (= ...111111111)
     end
     if (flagsIC & BetterVoiding.ItemCategoryFlags.IC_FREE_ITEMS ~= 0) then
         flagsLUT[0] = true
@@ -292,6 +309,7 @@ local function getLookUpTableForICFlags(flagsIC)
     if (flagsIC & BetterVoiding.ItemCategoryFlags.IC_SPIKE_ITEMS ~= 0) then
         flagsLUT[PickupPrice.PRICE_SPIKES] = true
     end
+
     return flagsLUT
 end
 
@@ -306,11 +324,14 @@ function BetterVoiding.calculatePickupDist(sourceEntity, flagsIC)
     local flagsLUT = getLookUpTableForICFlags(flagsIC)
     local pickupDists = {}
     local pickup = nil
+    local pickupPrice = 0
 
-    for _,entity in pairs(Isaac.GetRoomEntities()) do    -- Filter room for pickups
+    for _,entity in pairs(Isaac.GetRoomEntities()) do       -- Filter room for pickups
         if (entity.Type == EntityType.ENTITY_PICKUP) then
             pickup = entity:ToPickup()
-            if flagsLUT[pickup.Price] then
+            pickupPrice = pickup.Price
+            if pickupPrice > 0 then pickupPrice = 1 end     -- Replace price for shop items (For look up table)
+            if flagsLUT[pickupPrice] then
                 pickupDists[pickup] = sourceEntity.Position:Distance(pickup.Position)
             end
         end
@@ -546,7 +567,7 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
         --pickup = manageRestock(pickup, forVoiding) --doesn't work as intended
 
         -- Manages OptionsPickupIndex of the pickup
-        managePickupIndices(pickup, BetterVoiding.VoidingFlags.V_NEAREST_ITEM)
+        manageOnePickupIndexRA(pickup)
 
         -- Manages items for TheLost-like characters
         if srcEntityIsLostlike then
@@ -556,7 +577,7 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
                     item.OptionsPickupIndex = 100
                 end
             end
-            managePickupIndices(pickup, BetterVoiding.VoidingFlags.V_NEAREST_ITEM)
+            manageOnePickupIndexRA(pickup)
         end
 
         -- Manages shop restocks in Greedmode

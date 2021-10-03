@@ -41,9 +41,9 @@ BetterVoiding.ItemCategoryFlags = {
 }
 
 -- Standard values for voiding items
-local STD_COLOR <const> = Color(0.5,0.5,0.5,0.9,0,0,0)
-local STD_FLAGS_V <const> = BetterVoiding.VoidingFlags.V_ALL_FREE_ITEMS | BetterVoiding.VoidingFlags.V_NEAREST_ITEM
-local STD_FLAGS_IC <const> = BetterVoiding.ItemCategoryFlags.IC_ALL_ITEMS
+local STD_COLOR = Color(0.5,0.5,0.5,0.9,0,0,0)
+local STD_FLAGS_V = BetterVoiding.VoidingFlags.V_ALL_FREE_ITEMS | BetterVoiding.VoidingFlags.V_NEAREST_ITEM
+local STD_FLAGS_IC = BetterVoiding.ItemCategoryFlags.IC_ALL_ITEMS
 
 -- TODO
 BetterVoiding.VoidingItemTypes = {
@@ -104,117 +104,67 @@ local function calculateCollDist(sourceEntity, flagsIC)
     return collDists
 end
 
--------------------------------------------------------------------------
--- Removes all pickups with the same OptionsPickupIndex as the refPickup
------ @Retrun: refPickup if it is payed
--------------------------------------------------------------------------
-local function managePickupIndex(refPickup)
-    if refPickup == nil then
-        return nil
-    end
-
-    local index = refPickup.OptionsPickupIndex
-    if index ~= 0 then
-        for pickup,_ in pairs(calculateCollDist()) do
-            if (GetPtrHash(pickup) ~= GetPtrHash(refPickup) and pickup.OptionsPickupIndex == index) then
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, pickup.Position, Vector(0,0), item)
-                pickup:Remove()
-            end
-        end
-        refPickup.OptionsPickupIndex = 0
-    end
-
-    return (refPickup:IsShopItem() and nil) or refPickup --if shopitem then nil else refPickup
-end
-
 -------------------------------------
 -- TODO
 -------------------------------------
 local function managePickupIndices(sourceEntity, flagsV, flagsIC)
     local index = 0
     local indexItemTable = {}
+    local nearestPickup = nil
     local voidingPickups = {}
-    local otherPickups = calculateCollDist(sourceEntity, flagsIC)
+    local otherPickups = {}
+    local remainingPickups = calculateCollDist(sourceEntity, flagsIC)
 
-    for pickup,dist in pairs(otherPickups) do
-        index = pickup.OptionsPickupIndex
-        if (index == 0) then            --Items without OptionsPickupIndex
-            voidingPickups[pickup] = dist
-            goto continue
+    if (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_ITEM) ~= 0 then
+        nearestPickup = BetterVoiding.getNearestPayableItem(sourceEntity, flagsIC)
+        if nearestPickup ~= nil then
+            index = nearestPickup.OptionsPickupIndex
+            if index ~= 0 then
+                for pickup, dist in pairs(remainingPickups) do
+                    if pickup.OptionsPickupIndex == index then
+                        if not (GetPtrHash(pickup) == GetPtrHash(nearestPickup)) then
+                            otherPickups[pickup] = dist
+                        else
+                            voidingPickups[nearestPickup] = sourceEntity.Position:Distance(nearestPickup.Position)
+                        end
+                        remainingPickups[pickup] = nil
+                    end
+                end
+            end
         end
-
-        if indexItemTable[index] == nil then
-            indexItemTable[index] = {}
-        end
-        indexItemTable[index][pickup] = dist
-
-        ::continue::
+        remainingPickups = TableEx.updateTable(remainingPickups)
     end
 
     if (flagsV & BetterVoiding.VoidingFlags.V_ALL_FREE_ITEMS) ~= 0 then
-    
-        for _,table in pairs(indexTables) do
-            local nearestPickup = TableEx.getKeyOfLowestValue(table)
-            remainingPickups[nearestPickup] = table[nearestPickup]
-            for item,_ in pairs(table) do
-                if not (item == nearestPickup) then
-                    Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, item.Position, Vector(0,0), item)
-                    item:Remove()
+        for pickup, dist in pairs(remainingPickups) do
+            index = pickup.OptionsPickupIndex
+            if (pickup.Price == 0) then
+                if (index == 0) then            --Items without OptionsPickupIndex
+                    voidingPickups[pickup] = dist
+                    remainingPickups[pickup] = nil
+                    goto continue
                 end
+                if indexItemTable[index] == nil then
+                    indexItemTable[index] = {}
+                end
+                indexItemTable[index][pickup] = dist
             end
-            nearestPickup.OptionsPickupIndex = 0
+            ::continue::
         end
-    end
-    if (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_ITEM) ~= 0 then
-        item = managePickupIndex(BetterVoiding.payPickup(BetterVoiding.getNearestPayableItem(sourceEntity, itemTable.IC_FLAGS[itemIndex]), sourceEntity))
-        if item ~= nil then
-            items[item] = sourceEntity.Position:Distance(item.Position)
-        end
-    end
-
-    return remainingPickups
-end
-
--------------------------------------------------------------------------------------------------------------------
--- Removes all pickups with the same OptionsPickupIndex except the nearest pickups to sourceEntity for each index
------ @Return: Table of (Keys: Pickups, Values: Distance between the pickup and sourceEntity)
--------------------------------------------------------------------------------------------------------------------
-local function manageAllPickupIndices(sourceEntity)
-    local indexTables = {}
-    local index = 0
-    local remainingPickups = {}
-
-    for pickup,dist in pairs(calculateCollDist(sourceEntity)) do
-        if pickup:IsShopItem() then --ignore shop items
-            goto continue
-        end
-
-        index = pickup.OptionsPickupIndex
-        if (index == 0) then      --items without OptionsPickupIndex
-            remainingPickups[pickup] = dist
-            goto continue
-        end
-
-        if indexTables[index] == nil then
-            indexTables[index] = {}
-        end
-        indexTables[pickup.OptionsPickupIndex][pickup] = dist
-
-        ::continue::
-    end
-
-    for _,table in pairs(indexTables) do
-        local nearestPickup = TableEx.getKeyOfLowestValue(table)
-        remainingPickups[nearestPickup] = table[nearestPickup]
-        for item,_ in pairs(table) do
-            if not (item == nearestPickup) then
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, item.Position, Vector(0,0), item)
-                item:Remove()
+        for _,table in pairs(indexItemTable) do
+            nearestPickup = TableEx.getKeyOfLowestValue(table)
+            for pickup, dist in pairs(table) do
+                if not (pickup == nearestPickup) then
+                    otherPickups[pickup] = dist
+                end
+                remainingPickups[pickup] = nil
             end
+            voidingPickups[nearestPickup] = table[nearestPickup]
         end
-        nearestPickup.OptionsPickupIndex = 0
+        remainingPickups = TableEx.updateTable(remainingPickups)
     end
-    return remainingPickups
+
+    return {voidingPickups, otherPickups}
 end
 
 ----------------------------------------------------------------
@@ -307,34 +257,10 @@ local function manageRestock(pickup, forVoiding)
     end
 end
 
-------------------------------
--- TODO
---------------------------------
-local function isItemOK(item, flags)
-    if (flags & BetterVoiding.VoidingFlags.ALL_FREE) ~= 0 then
-        if item.Price == 0 then
-            return true
-        end
-    end
-    if (flags & BetterVoiding.VoidingFlags.ONLY_DEVIL) ~= 0 then
-        if item.Price == PickupPrice.PRICE_ONE_HEART or item.Price == PickupPrice.PRICE_TWO_HEARTS or item.Price == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS
-            or item.Price == PickupPrice.PRICE_THREE_SOULHEARTS or item.Price == PickupPrice.PRICE_SOUL then
-                return true
-        end
-    elseif (flags & BetterVoiding.VoidingFlags.ONLY_SHOP) ~= 0 then
-        if item.Price > 0 or item.Price ~= PickupPrice.PRICE_FREE then
-            return true
-        end
-    elseif (flags & BetterVoiding.VoidingFlags.NEAREST) ~= 0 or (flags & BetterVoiding.VoidingFlags.NEAREST_PAYABLE) ~= 0 then
-        return true
-    end
-    return false
-end
-
 ---------------------------------
 -- TODO
 -----------------------------------
-local function getLookUpTableForICFlags(flags)
+local function getLookUpTableForICFlags(flagsIC)
     local flagsLUT = {}
     flagsLUT[1] = false
     flagsLUT[0] = false
@@ -346,24 +272,24 @@ local function getLookUpTableForICFlags(flags)
     flagsLUT[PickupPrice.PRICE_SPIKES] = false
     flagsLUT[PickupPrice.PRICE_FREE] = false
 
-    if flagsIC == BetterVoiding.ItemCategoryFlags.IC_ALL_ITEMS then
+    if (flagsIC == BetterVoiding.ItemCategoryFlags.IC_ALL_ITEMS) then
         flagsIC = -1 --Activate all flags
     end
     if (flagsIC & BetterVoiding.ItemCategoryFlags.IC_FREE_ITEMS ~= 0) then
         flagsLUT[0] = true
     end
-    if (flagsLUT & BetterVoiding.ItemCategoryFlags.IC_HEARTDEAL_ITEMS ~= 0) then
+    if (flagsIC & BetterVoiding.ItemCategoryFlags.IC_HEARTDEAL_ITEMS ~= 0) then
         flagsLUT[PickupPrice.PRICE_ONE_HEART] = true
         flagsLUT[PickupPrice.PRICE_TWO_HEARTS] = true
         flagsLUT[PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS] = true
         flagsLUT[PickupPrice.PRICE_THREE_SOULHEARTS] = true
         flagsLUT[PickupPrice.PRICE_SOUL] = true
     end
-    if (flagsLUT & BetterVoiding.ItemCategoryFlags.IC_SHOP_ITEMS ~= 0) then
+    if (flagsIC & BetterVoiding.ItemCategoryFlags.IC_SHOP_ITEMS ~= 0) then
         flagsLUT[1] = true
         flagsLUT[PickupPrice.PRICE_FREE] = true
     end
-    if (flagsLUT & BetterVoiding.ItemCategoryFlags.IC_SPIKE_ITEMS ~= 0) then
+    if (flagsIC & BetterVoiding.ItemCategoryFlags.IC_SPIKE_ITEMS ~= 0) then
         flagsLUT[PickupPrice.PRICE_SPIKES] = true
     end
     return flagsLUT
@@ -620,17 +546,17 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
         --pickup = manageRestock(pickup, forVoiding) --doesn't work as intended
 
         -- Manages OptionsPickupIndex of the pickup
-        managePickupIndex(pickup)
+        managePickupIndices(pickup, BetterVoiding.VoidingFlags.V_NEAREST_ITEM)
 
         -- Manages items for TheLost-like characters
         if srcEntityIsLostlike then
             for item,_ in  pairs(calculateCollDist()) do
-                --removes other soulheart or spike deals in this room on next call of managePickupIndex
+                --removes other soulheart or spike deals in this room on next call of managePickupIndices
                 if (item.Price == PickupPrice.PRICE_THREE_SOULHEARTS or item.Price == PickupPrice.PRICE_SPIKES) then
                     item.OptionsPickupIndex = 100
                 end
             end
-            managePickupIndex(pickup)
+            managePickupIndices(pickup, BetterVoiding.VoidingFlags.V_NEAREST_ITEM)
         end
 
         -- Manages shop restocks in Greedmode
@@ -683,9 +609,7 @@ function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
 
     local itemTable = betterVoidingItemTables[betterVoidingItemID & 7] --Get betterVoidingItemType back from betterVoidingItemID
     local itemIndex = -1
-    local flagsV = 0
-    local items = {}
-    local item = nil
+    local allPickups = {}
 
     for i=1, #(itemTable.TYPE) do
         if (itemTable.TYPE[i] == betterVoidingItemID >> 3) then
@@ -696,22 +620,19 @@ function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
     ::skip::
 
     if itemIndex == -1 then
-        return nil
+        return {}
     end
 
-    flagsV = itemTable.V_FLAGS[itemIndex]
-
-    if (flagsV & BetterVoiding.VoidingFlags.V_ALL_FREE_ITEMS) ~= 0 then
-        items = manageAllPickupIndices(sourceEntity)
+    allPickups = managePickupIndices(sourceEntity, itemTable.V_FLAGS[itemIndex], itemTable.IC_FLAGS[itemIndex])
+    for pickup, _ in pairs(allPickups[1]) do
+        BetterVoiding.payPickup(pickup, sourceEntity, true)
     end
-    if (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_ITEM) ~= 0 then
-        item = managePickupIndex(BetterVoiding.payPickup(BetterVoiding.getNearestPayableItem(sourceEntity, itemTable.IC_FLAGS[itemIndex]), sourceEntity))
-        if item ~= nil then
-            items[item] = sourceEntity.Position:Distance(item.Position)
-        end
+    for pickup, _ in pairs(allPickups[2]) do
+        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, pickup.Position, Vector(0,0), pickup)
+        pickup:Remove()
     end
 
-    return items
+    return allPickups[1]
 end
 
 
@@ -732,6 +653,7 @@ function BetterVoiding.betterVoidingRA(betterVoidingItemID, sourceEntity)
         Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, item.Position, Vector(0,0), item) -- play animation
         item:Remove()
     end
+
     return collTypes
 end
 
@@ -740,10 +662,9 @@ end
 ---------------------------------------------------------------------------------------------------------
 
 -- Function for already existing voiding-items and their ModCallbacks
-local function betterVoidingColls(_, _, collType, playerEntity)
+local function betterVoidingColls(_, collType, _, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
     BetterVoiding.betterVoiding((collType << 3 | BetterVoiding.VoidingItemTypes.TYPE_COLLECTIBLE), playerEntity)
-
     return true
 end
 
@@ -823,39 +744,12 @@ end
 ----------------------------
 -- TODO
 ----------------------------
-local function handleVoidingFlags(color, flags)
-    local handledItems = {}
-    local item = nil
-
-    if (flags & BetterVoiding.VoidingFlags.NEAREST) ~= 0 then
-        item = BetterVoiding.getNearestItem()
-    end
-    if (flags & BetterVoiding.VoidingFlags.NEAREST_PAYABLE) ~= 0 then
-        item = BetterVoiding.getNearestPayableItem()
-    end
-    -- ONLY_DEVIL and ONLY_SHOP flags get handled in getNearestItem and getNearestPayableItem
-    if item ~= nil then
-        table.insert(handledItems, item)
-        spawnPreVoidingAnimation(color, item)
-    end
-    if (flags & BetterVoiding.VoidingFlags.ALL_FREE) ~= 0 then
-        for coll, _ in pairs(calculateCollDist()) do
-            if (coll.Price == 0 and GetPtrHash(coll) ~= GetPtrHash(item)) then
-                table.insert(handledItems, coll)
-                spawnPreVoidingAnimation(color, coll)
-            end
-        end
-    end
-end
-
-----------------------------
--- TODO
-----------------------------
 local function preVoidingAnimation() -- PreVoiding animations will be removed if the corresponding item is removed
     local betterVoidingItemType = -1
     local itemType = 0
     local betterVoidingItemTable = nil
     local player = nil
+    local allColls = {}
 
     for playerIndex=0, 3 do   --For each player
         player = Isaac.GetPlayer(playerIndex)
@@ -867,7 +761,7 @@ local function preVoidingAnimation() -- PreVoiding animations will be removed if
                 itemType = player:GetCard(0)
                 if (itemType == 0) then
                     betterVoidingItemType = BetterVoiding.VoidingItemTypes.TYPE_PILL
-                    itemType = player:GetPill()
+                    itemType = player:GetPill(0)
                     if (itemType == 0) then
                         betterVoidingItemType = BetterVoiding.VoidingItemTypes.TYPE_COLLECTIBLE
                         itemType = player:GetActiveItem()                                   --Check item in ActiveSlot
@@ -882,7 +776,10 @@ local function preVoidingAnimation() -- PreVoiding animations will be removed if
 
             for i=1, betterVoidingItemTable.COUNT do
                 if betterVoidingItemTable.TYPE[i] == itemType then
-                    handleVoidingFlags(voidingColls.COLOR[i], voidingColls.VOIDING_FLAGS[i])
+                    allColls = managePickupIndices(player, betterVoidingItemTable.V_FLAGS[i], betterVoidingItemTable.IC_FLAGS[i])
+                    for item, _ in pairs(allColls[1]) do
+                        spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[i], item)
+                    end
                     return
                 end
             end

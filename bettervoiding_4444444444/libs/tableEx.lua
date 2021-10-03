@@ -57,6 +57,22 @@ function TableEx.getKeyOfHighestValue(keyTable)
     return key
 end
 
+--------------------------------------------------------------------
+-- Concatenate two keyTables.
+-- If table2 entries with same key as in table1 will replace them
+----- @Return: Resulting keyTable
+--------------------------------------------------------------------
+function TableEx.concat(table1, table2)
+    local concatTable = {}
+    for key, value in pairs(table1) do
+        concatTable[key] = value
+    end
+    for key, value in pairs(table2) do
+        concatTable[key] = value
+    end
+    return concatTable
+end
+
 ---------------------------------
 -- Copy a keyTable
 ----- @Return: Copy of keyTable

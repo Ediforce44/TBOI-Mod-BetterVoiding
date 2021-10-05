@@ -28,16 +28,16 @@ local preVoidingAnmSprites = {}
 BetterVoiding = {version = "1.0"}
 -- Flags to determine how the voiding of an BetterVoiding item works
 BetterVoiding.VoidingFlags = {
-    V_ALL_FREE_ITEMS = 1<<0,
-    V_NEAREST_ITEM = 1<<1,
+    V_ALL_FREE_PICKUPS = 1<<0,
+    V_NEAREST_PICKUP = 1<<1,
 }
 -- Flags to select pickups in a room
 BetterVoiding.PickupCategoryFlags = {
     PC_ALL_PICKUPS = 0,
-    PC_PRPCE_FREE = 1<<0,
-    PC_PRPCE_HEARTS = 1<<1,
-    PC_PRPCE_COINS = 1<<2,
-    PC_PRPCE_SPIKES = 1<<3,
+    PC_PRICE_FREE = 1<<0,
+    PC_PRICE_HEARTS = 1<<1,
+    PC_PRICE_COINS = 1<<2,
+    PC_PRICE_SPIKES = 1<<3,
     PC_TYPE_COLLECTIBLE = 1<<10,
     PC_TYPE_TRINKET = 1<<11,
     PC_TYPE_PILL = 1<<12,
@@ -46,7 +46,7 @@ BetterVoiding.PickupCategoryFlags = {
 }
 -- Standard values for BetterVoiding items
 local STD_COLOR = Color(0.5,0.5,0.5,0.9,0,0,0)
-local STD_FLAGS_V = BetterVoiding.VoidingFlags.V_ALL_FREE_ITEMS | BetterVoiding.VoidingFlags.V_NEAREST_ITEM
+local STD_FLAGS_V = BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS | BetterVoiding.VoidingFlags.V_NEAREST_PICKUP
 local STD_FLAGS_PC = BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE
 
 -- Types to describe the PickupVariant of an BetterVoiding item
@@ -194,22 +194,22 @@ local function getLookUpTableForPCFlags(flagsPC)
         flagsPC = flagsPC | (2^10 - 1)
     end
     -- PriceFlags
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRPCE_FREE ~= 0) then
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE ~= 0) then
         flagsLUT[0] = true
     end
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRPCE_HEARTS ~= 0) then
-        flagsLUT[PickupPrice.PRPCE_ONE_HEART] = true
-        flagsLUT[PickupPrice.PRPCE_TWO_HEARTS] = true
-        flagsLUT[PickupPrice.PRPCE_ONE_HEART_AND_TWO_SOULHEARTS] = true
-        flagsLUT[PickupPrice.PRPCE_THREE_SOULHEARTS] = true
-        flagsLUT[PickupPrice.PRPCE_SOUL] = true
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS ~= 0) then
+        flagsLUT[PickupPrice.PRICE_ONE_HEART] = true
+        flagsLUT[PickupPrice.PRICE_TWO_HEARTS] = true
+        flagsLUT[PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS] = true
+        flagsLUT[PickupPrice.PRICE_THREE_SOULHEARTS] = true
+        flagsLUT[PickupPrice.PRICE_SOUL] = true
     end
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRPCE_COINS ~= 0) then
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS ~= 0) then
         flagsLUT[1] = true
-        flagsLUT[PickupPrice.PRPCE_FREE] = true
+        flagsLUT[PickupPrice.PRICE_FREE] = true
     end
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRPCE_SPIKES ~= 0) then
-        flagsLUT[PickupPrice.PRPCE_SPIKES] = true
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_SPIKES ~= 0) then
+        flagsLUT[PickupPrice.PRICE_SPIKES] = true
     end
     -- TypeFlags
     flagsLUT[PickupVariant.PICKUP_COLLECTIBLE] = ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE) ~= 0)
@@ -258,6 +258,94 @@ function BetterVoiding.calculatePickupDist(sourceEntity, flagsPC)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
+-- Returns nearest flagsPC (default = PC_ALL_PICKUPS) matching pickup to the sourceEntity (default = Player_0)
+----- @Return: Nearest collectible
+-------------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding.getNearestPickup(sourceEntity, flagsPC)
+    sourceEntity = sourceEntity or Isaac.GetPlayer()
+    flagsPC = flagsPC or BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS
+
+    return TableEx.getKeyOfLowestValue(BetterVoiding.calculatePickupDist(sourceEntity, flagsPC))
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Returns if the pickup is payable by sourceEntity (default = Player_0)
+----- @Return: True if the sourceEntity can pay pickup, False otherwise
+-------------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding.isPickupPayable(pickup, sourceEntity)
+    if pickup == nil then return false end
+    sourceEntity = sourceEntity or Isaac.GetPlayer(0)
+
+    if (pickup:IsShopItem()) then
+        -- Pickup is always payable if sourceEntity is not one of the first 4 players
+        local sourceEntityIsPlayer = false
+        for i = 0, 3 do
+            if GetPtrHash(sourceEntity) == GetPtrHash(Isaac.GetPlayer(i)) then
+                sourceEntityIsPlayer = true
+            end
+        end
+
+        if sourceEntityIsPlayer then
+            local playerEntity = sourceEntity:ToPlayer()
+            local pickupPrice = pickup.Price
+
+            -- Check if playerEntity could pay for pickup
+            if pickupPrice == PickupPrice.PRICE_ONE_HEART then
+                if playerEntity:GetMaxHearts() < 2 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_TWO_HEARTS then
+                if playerEntity:GetMaxHearts() < 2 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_THREE_SOULHEARTS then
+                if playerEntity:GetSoulHearts() < 1 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
+                if playerEntity:GetMaxHearts() < 2 or playerEntity:GetSoulHearts() < 2 then
+                    return false
+                end
+            elseif pickupPrice == PickupPrice.PRICE_SOUL then
+                if not playerEntity:HasTrinket(TrinketType.TRINKET_YOUR_SOUL, false) then
+                    return false
+                end
+            elseif pickupPrice > 0 then
+                if (playerEntity:GetNumCoins() < pickupPrice) then
+                    return false
+                end
+            end
+        end
+    end
+
+    return true
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Returns nearest payable flagsPC (default = PC_ALL_PICKUPS) matching pickup to the sourceEntity (default = Player_0)
+----- @Return: Nearest payable collectible
+-------------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC)
+    sourceEntity = sourceEntity or Isaac.GetPlayer()
+    flagsPC = flagsPC or BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS
+
+    local pickupList = BetterVoiding.calculatePickupDist(sourceEntity, flagsPC)
+    local pickup = TableEx.getKeyOfLowestValue(pickupList)
+
+    -- Iterate over all collectibles from nearest to farest and check if one is payable
+    while pickup ~= nil do
+        if BetterVoiding.isPickupPayable(pickup, sourceEntity) then
+            return pickup
+        else
+            pickupList[pickup] = nil
+            pickupList = TableEx.updateTable(pickupList)
+            pickup = TableEx.getKeyOfLowestValue(pickupList)
+        end
+    end
+    return nil
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
 -- Clones pickup on the next free position to clonePosition (default = pickup.Position)
 ----- @Return: Cloned pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -294,41 +382,6 @@ function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Returns nearest flagsPC (default = PC_ALL_PICKUPS) matching pickup to the sourceEntity (default = Player_0)
------ @Return: Nearest collectible
--------------------------------------------------------------------------------------------------------------------------------------------
-function BetterVoiding.getNearestPickup(sourceEntity, flagsPC)
-    sourceEntity = sourceEntity or Isaac.GetPlayer()
-    flagsPC = flagsPC or BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS
-
-    return TableEx.getKeyOfLowestValue(BetterVoiding.calculatePickupDist(sourceEntity, flagsPC))
-end
-
--------------------------------------------------------------------------------------------------------------------------------------------
--- Returns nearest payable flagsPC (default = PC_ALL_PICKUPS) matching pickup to the sourceEntity (default = Player_0)
------ @Return: Nearest payable collectible
--------------------------------------------------------------------------------------------------------------------------------------------
-function BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC)
-    sourceEntity = sourceEntity or Isaac.GetPlayer()
-    flagsPC = flagsPC or BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS
-
-    local pickupList = BetterVoiding.calculatePickupDist(sourceEntity, flagsPC)
-    local pickup = TableEx.getKeyOfLowestValue(pickupList)
-
-    -- Iterate over all collectibles from nearest to farest and check if one is payable
-    while pickup ~= nil do
-        if BetterVoiding.isPickupPayable(pickup, sourceEntity) then
-            return pickup
-        else
-            pickupList[pickup] = nil
-            pickupList = TableEx.updateTable(pickupList)
-            pickup = TableEx.getKeyOfLowestValue(pickupList)
-        end
-    end
-    return nil
-end
-
--------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC)
@@ -351,8 +404,8 @@ function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC)
         pickupIndexTables[pickupIndex][pickup] = dist
     end
     -- Handle VoidingFlags:
-    --- V_NEAREST_ITEM
-    if (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_ITEM) ~= 0 then
+    --- V_NEAREST_PICKUP
+    if (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_PICKUP) ~= 0 then
         local nearestPickup = BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC)
         if nearestPickup ~= nil then
             -- Select nearestPickup
@@ -374,8 +427,8 @@ function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC)
         pickupIndexTables[pickupIndex] = nil
         remainingPickups = TableEx.updateTable(remainingPickups)
     end
-    --- V_ALL_FREE_ITEMS
-    if (flagsV & BetterVoiding.VoidingFlags.V_ALL_FREE_ITEMS) ~= 0 then
+    --- V_ALL_FREE_PICKUPS
+    if (flagsV & BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS) ~= 0 then
         for index, pickupTable in pairs(pickupIndexTables) do
             if index == 0 then
                 -- Select all pickups if their OptionsPickupIndex = 0
@@ -420,7 +473,7 @@ function BetterVoiding.managePickupIndices(refPickups)
     for i=1, #refPickups do
         refPickup = refPickups[i]
         -- Get nearest payable pickup to refPickup
-        indexPickups = BetterVoiding.selectPickups(refPickup, BetterVoiding.VoidingFlags.V_NEAREST_ITEM)
+        indexPickups = BetterVoiding.selectPickups(refPickup, BetterVoiding.VoidingFlags.V_NEAREST_PICKUP)
         if GetPtrHash(indexPickups[1]) == GetPtrHash(refPickup) then        --select refPickup only if it is payable
             -- Take the refPickup and set its index to 0
             refPickup.OptionsPickupIndex = 0
@@ -434,59 +487,6 @@ function BetterVoiding.managePickupIndices(refPickups)
     end
 
     return selectedPickups
-end
-
--------------------------------------------------------------------------------------------------------------------------------------------
--- Returns if the pickup is payable by sourceEntity (default = Player_0)
------ @Return: True if the sourceEntity can pay pickup, False otherwise
--------------------------------------------------------------------------------------------------------------------------------------------
-function BetterVoiding.isPickupPayable(pickup, sourceEntity)
-    if pickup == nil then return false end
-    sourceEntity = sourceEntity or Isaac.GetPlayer(0)
-
-    if (pickup:IsShopItem()) then
-        -- Pickup is always payable if sourceEntity is not one of the first 4 players
-        local sourceEntityIsPlayer = false
-        for i = 0, 3 do
-            if GetPtrHash(sourceEntity) == GetPtrHash(Isaac.GetPlayer(i)) then
-                sourceEntityIsPlayer = true
-            end
-        end
-
-        if sourceEntityIsPlayer then
-            local playerEntity = sourceEntity:ToPlayer()
-            local pickupPrice = pickup.Price
-
-            -- Check if playerEntity could pay for pickup
-            if pickupPrice == PickupPrice.PRPCE_ONE_HEART then
-                if playerEntity:GetMaxHearts() < 2 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRPCE_TWO_HEARTS then
-                if playerEntity:GetMaxHearts() < 2 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRPCE_THREE_SOULHEARTS then
-                if playerEntity:GetSoulHearts() < 1 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRPCE_ONE_HEART_AND_TWO_SOULHEARTS then
-                if playerEntity:GetMaxHearts() < 2 or playerEntity:GetSoulHearts() < 2 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRPCE_SOUL then
-                if not playerEntity:HasTrinket(TrinketType.TRINKET_YOUR_SOUL, false) then
-                    return false
-                end
-            elseif pickupPrice > 0 then
-                if (playerEntity:GetNumCoins() < pickupPrice) then
-                    return false
-                end
-            end
-        end
-    end
-
-    return true
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -522,13 +522,13 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
 
         -- Player pays price for the pickup if he can
         -- Price: 1 RedHeart
-        if pickupPrice == PickupPrice.PRPCE_ONE_HEART then
+        if pickupPrice == PickupPrice.PRICE_ONE_HEART then
             if playerEntity:GetMaxHearts() < 2 then
                 return nil
             end
             playerEntity:AddMaxHearts(-2)
         -- Price: 2 RedHearts
-        elseif pickupPrice == PickupPrice.PRPCE_TWO_HEARTS then
+        elseif pickupPrice == PickupPrice.PRICE_TWO_HEARTS then
             local maxHearts = playerEntity:GetMaxHearts()
             if maxHearts < 2 then
                 return nil
@@ -537,7 +537,7 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
             end
             playerEntity:AddMaxHearts(-maxHearts)
         -- Price: 3 SoulHearts
-        elseif pickupPrice == PickupPrice.PRPCE_THREE_SOULHEARTS then
+        elseif pickupPrice == PickupPrice.PRICE_THREE_SOULHEARTS then
             local maxHeartsSoul = playerEntity:GetSoulHearts()
             if maxHeartsSoul < 1 then
                 return nil
@@ -546,7 +546,7 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
             end
             playerEntity:AddSoulHearts(-maxHeartsSoul)
         -- Price: 1 RedHeart & 2 SoulHearts
-        elseif pickupPrice == PickupPrice.PRPCE_ONE_HEART_AND_TWO_SOULHEARTS then
+        elseif pickupPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
             local maxHearts = playerEntity:GetMaxHearts()
             local maxHeartsSoul = playerEntity:GetSoulHearts()
             if maxHearts < 2 or maxHeartsSoul < 2 then
@@ -557,7 +557,7 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
             playerEntity:AddMaxHearts(-maxHearts)
             playerEntity:AddSoulHearts(-maxHeartsSoul)
         -- Price: Spikes
-        elseif pickupPrice == PickupPrice.PRPCE_SPIKES then
+        elseif pickupPrice == PickupPrice.PRICE_SPIKES then
             -- Pay price
             if not srcEntityIsLostlike then
                 playerEntity:TakeDamage(2, DamageFlag.DAMAGE_NO_PENALTIES, EntityRef(pickup), 0)
@@ -573,7 +573,7 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
                 end
             end
         -- Price: Soul
-        elseif pickupPrice == PickupPrice.PRPCE_SOUL then
+        elseif pickupPrice == PickupPrice.PRICE_SOUL then
             if not playerEntity:HasTrinket(TrinketType.TRINKET_YOUR_SOUL, false) then
                 return nil
             end
@@ -604,7 +604,7 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
         if srcEntityIsLostlike then
             -- Removes other collectibles which have soulheart or spike prices in this room
             for pickup,_ in  pairs(BetterVoiding.calculatePickupDist(nil, STD_FLAGS_PC)) do
-                if (pickup.Price == PickupPrice.PRPCE_THREE_SOULHEARTS or pickup.Price == PickupPrice.PRPCE_SPIKES) then
+                if (pickup.Price == PickupPrice.PRICE_THREE_SOULHEARTS or pickup.Price == PickupPrice.PRICE_SPIKES) then
                     pickup.OptionsPickupIndex = 100
                 end
             end
@@ -939,6 +939,6 @@ local function resetPreVoidingAnimations()
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
-modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_RENDER, preVoidingAnimation, PickupVariant.PICKUP_COLLECTIBLE)
+modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_RENDER, preVoidingAnimation)
 modBV:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, resetPreVoidingAnimations)
 -------------------------------------------------------------------------------------------------------------------------------------------

@@ -678,7 +678,7 @@ end
 ---- If betterVoidingItemType is CARD or PILL, the item will be used first then apply BetterVoiding functions and then used a second time.
 ----- @Return: ID for this BetterVoiding item
 -------------------------------------------------------------------------------------------------------------------------------------------
-function BetterVoiding.voidingItemConstructor(betterVoidingItemType, itemType, generateModCallback, flagsV, flagsPC, preVoidingColor)
+function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemType, generateModCallback, flagsV, flagsPC, preVoidingColor)
     if (betterVoidingItemType == nil) or (itemType == nil) then return -1 end
     if generateModCallback == nil then
         generateModCallback = false

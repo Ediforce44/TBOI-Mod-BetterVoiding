@@ -2,6 +2,7 @@
 local betterVoidingTestMod = RegisterMod("BetterVoidingTestMod", 1)
 
 local debugTexts = {}
+local BVIID = {}
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 --[[
@@ -16,7 +17,7 @@ local function test()
     debugTexts[8] = ""
     debugTexts[9] = ""
 end
-betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, test) local function setTitl() debugTexts[0] = "test" end
+betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, test) local function setTitlee() debugTexts[0] = "test" end
 -------------------------------------------------------------------------------------------------------------------------------------------]]
 -------------------------------------------------------------------------------------------------------------------------------------------
 --[[
@@ -60,7 +61,7 @@ local function test()
     end
     return true
 end
-betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, test, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitl() debugTexts[0] = "test" end-- 5.100.294
+betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, test, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitlee() debugTexts[0] = "test" end -- 5.100.294
 -------------------------------------------------------------------------------------------------------------------------------------------]]
 -------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -591,14 +592,140 @@ local function payPickupTest()
     return true
 end
 
+local function betterVoidingItemConstructorTest()
+    local player = Isaac.GetPlayer(0)
+    local playerData = player:GetData()
+    local nextTest = true
+    local itemType = 0
+
+    if playerData["betterVoidingItemConstructorTest"] == nil then
+        playerData["betterVoidingItemConstructorTest"] = 0
+        debugTexts[1] = "----"
+        debugTexts[2] = "COLL Standard: "
+        itemType = CollectibleType.COLLECTIBLE_BIBLE
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, itemType, player.Position, Vector(0,0), nil)
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE " "
+        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType)
+        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[3] = "COLL All Free Pickups: "
+    end
+    if playerData["betterVoidingItemConstructorTest"] == 1 then
+        itemType = CollectibleType.COLLECTIBLE_BOOK_OF_BELIAL
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, itemType, player.Position, Vector(0,0), nil)
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE " "
+        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType
+            , BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS)
+        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[3] = "COLL Standard GREEN: "
+    end
+    if playerData["betterVoidingItemConstructorTest"] == 2 then
+        itemType = CollectibleType.COLLECTIBLE_NECRONOMICON
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, itemType, player.Position, Vector(0,0), nil)
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE " "
+        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType, nil, nil, Color(0.5, 1, 0.5, 1, 0, 0, 0))
+        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[3] = "CARD Standard: "
+    end
+    if playerData["betterVoidingItemConstructorTest"] == 3 then
+        itemType = Card.CARD_JUSTICE
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, itemType, player.Position, Vector(0,0), nil)
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_CARD " "
+        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_CARD, itemType)
+        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[3] = "CARD Nearest Pickup: "
+    end
+    if playerData["betterVoidingItemConstructorTest"] == 4 then
+        itemType = Card.CARD_MAGICIAN
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, itemType, player.Position, Vector(0,0), nil)
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_CARD " "
+        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_CARD, itemType
+            , BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS)
+        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[3] = "PILL All Free CONS: "
+    end
+    if playerData["betterVoidingItemConstructorTest"] == 5 then
+        local pillColor = PillColor.PILL_BLUE_BLUE
+        itemType = Game():GetItemPool():GetPillEffect(pillColor)
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_PILL, itemType, player.Position, Vector(0,0), nil)
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_PILL, itemType, player.Position, Vector(0,0), nil)
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_PILL " "
+        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_PILL, itemType
+            , BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS, BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
+        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[3] = "PILL Nearest COLL: "
+    end
+    if playerData["betterVoidingItemConstructorTest"] == 6 then
+        local pillColor = PillColor.PILL_ORANGE_ORANGE
+        itemType = Game():GetItemPool():GetPillEffect(pillColor)
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_PILL, itemType, player.Position, Vector(0,0), nil)
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_PILL " "
+        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_PILL, itemType
+            , BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[4] = "Lets go for the next Test. Take the item!"
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, CollectibleType.COLLECTIBLE_BEAN, player.Position, Vector(0,0), nil)        -- 5.100.111
+        nextTest = false
+    end
+    if nextTest then
+        debugTexts[1] = debugTexts[2]
+        debugTexts[2] = debugTexts[3]
+        debugTexts[3] = ""
+        playerData["betterVoidingItemConstructorTest"] = playerData["betterVoidingItemConstructorTest"] + 1
+    end
+    return true
+end
+
+local function betterVoidingTest()
+    local player = Isaac.GetPlayer(0)
+    local playerData = player:GetData()
+    local nextTest = true
+    local allItems
+
+    if playerData["betterVoidingTest"] == nil then
+        playerData["betterVoidingTest"] = 0
+        debugTexts[1] = "----"
+        debugTexts[2] = "COLL Standard: "
+        allItems = BetterVoiding.betterVoiding(BVIID[0])
+        debugTexts[3] = "COLL Standard Player(1): "
+    end
+    if playerData["betterVoidingTest"] == 1 then
+        allItems = BetterVoiding.betterVoiding(BVIID[0], Isaac.GetPlayer(1))
+        debugTexts[3] = "CARD Nearest Pickup: "
+    end
+    if playerData["betterVoidingTest"] == 2 then
+        allItems = BetterVoiding.betterVoiding(BVIID[4])
+        debugTexts[3] = "PILL All Free CONS: "
+    end
+    if playerData["betterVoidingTest"] == 3 then
+        allItems = BetterVoiding.betterVoiding(BVIID[5])
+        debugTexts[3] = "COLL Standard: "
+    end
+    if playerData["betterVoidingTest"] == 4 then
+        allItems = BetterVoiding.betterVoiding(BVIID[0])
+        nextTest = false
+    end
+
+    for item, dist in pairs(allItems) do
+        debugTexts[2] = debugTexts[2] .. tonumber(item.SubType) .. " " .. tonumber(dist) .. "; "
+    end
+    if nextTest then
+        debugTexts[1] = debugTexts[2]
+        debugTexts[2] = debugTexts[3]
+        debugTexts[3] = ""
+        playerData["betterVoidingTest"] = playerData["betterVoidingTest"] + 1
+    end
+    return true
+end
+
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, calculatePickupDistTest) local function setTitle() debugTexts[0] = "CalculatePickupDistTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, getNearestPickupTest) local function setTitle() debugTexts[0] = "GetNearestPickupTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, isPickupPayableTest) local function setTitle() debugTexts[0] = "IsPickupPayableTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, getNearestPayablePickupTest) local function setTitle() debugTexts[0] = "GetNearestPayablePickupTest" end
---betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, clonePickupTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitl() debugTexts[0] = "ClonePickupTest" end -- 5.100.294
+--betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, clonePickupTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "ClonePickupTest" end -- 5.100.294
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, selectPickupsTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "SelectPickupsTest" end -- 5.100.294
---betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, managePickupIndicesTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitl() debugTexts[0] = "ManagePickupIndicesTest" end -- 5.100.294
-betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, payPickupTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitl() debugTexts[0] = "PayPickupTest" end-- 5.100.294
+--betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, managePickupIndicesTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "ManagePickupIndicesTest" end -- 5.100.294
+--betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, payPickupTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "PayPickupTest" end -- 5.100.294
+--betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingItemConstructorTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "BetterVoidingItemConstructorTest" end betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN)
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function drawDebugText()
@@ -606,7 +733,7 @@ local function drawDebugText()
         Isaac.RenderText(debugTexts[i], 60, 40+(15*i), 255, 0, 0, 255)
     end
     setTitle()
-    Isaac.RenderText(debugTexts[0], 160, 25, 255, 0, 0, 255)
+    Isaac.RenderText(debugTexts[0], 130, 25, 255, 0, 0, 255)
 end
 
 betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, drawDebugText)

@@ -78,78 +78,83 @@ local function calculatePickupDistTest()
     debugTexts[9] = "COINS CONS: "
     debugTexts[10] = "HEART COLL: "
     debugTexts[11] = "SPIKE COLL: "
+    debugTexts[13] = "ALL COINS: "
 
     local pickupDists = nil
     pickupDists = BetterVoiding.calculatePickupDist()
     for key, value in pairs(pickupDists) do
         debugTexts[1] = debugTexts[1] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(1))
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(1).Position)
     for key, value in pairs(pickupDists) do
         debugTexts[2] = debugTexts[2] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE)
     for key, value in pairs(pickupDists) do
         debugTexts[3] = debugTexts[3] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_CARD)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_CARD)
     for key, value in pairs(pickupDists) do
         debugTexts[4] = debugTexts[4] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
     for key, value in pairs(pickupDists) do
         debugTexts[5] = debugTexts[5] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
     for key, value in pairs(pickupDists) do
         debugTexts[6] = debugTexts[6] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_PILL)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_PILL)
     for key, value in pairs(pickupDists) do
         debugTexts[7] = debugTexts[7] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_TRINKET)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE | BetterVoiding.PickupCategoryFlags.PC_TYPE_TRINKET)
     for key, value in pairs(pickupDists) do
         debugTexts[8] = debugTexts[8] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
     for key, value in pairs(pickupDists) do
         debugTexts[9] = debugTexts[9] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
     for key, value in pairs(pickupDists) do
         debugTexts[10] = debugTexts[10] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_PRICE_SPIKES | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_SPIKES | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
     for key, value in pairs(pickupDists) do
         debugTexts[11] = debugTexts[11] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
-    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
     for key, value in pairs(pickupDists) do
         debugTexts[12] = debugTexts[12] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
+    end
+    pickupDists = BetterVoiding.calculatePickupDist(Isaac.GetPlayer(0).Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS)
+    for key, value in pairs(pickupDists) do
+        debugTexts[13] = debugTexts[13] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
     end
 end
 
 local function getNearestPickupTest()
     debugTexts[1] = "Standard: "
-    debugTexts[2] = "TYPE COLL Player(1): "
+    debugTexts[2] = "COLL Player(1): "
     local pickup = nil
     pickup = BetterVoiding.getNearestPickup()
     if pickup == nil then
         debugTexts[1] = debugTexts[1] .. tostring(nil)
     else
-        debugTexts[1] = debugTexts[1] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. "; "
+        debugTexts[1] = debugTexts[1] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. " " .. math.floor(pickup.Position:Distance(Isaac.GetPlayer().Position)) .. "; "
     end
-    pickup = BetterVoiding.getNearestPickup(Isaac.GetPlayer(1), BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+    pickup = BetterVoiding.getNearestPickup(Isaac.GetPlayer(1).Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
     if pickup == nil then
         debugTexts[2] = debugTexts[2] .. tostring(nil)
     else
-        debugTexts[2] = debugTexts[2] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. "; "
+        debugTexts[2] = debugTexts[2] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. " " .. math.floor(pickup.Position:Distance(Isaac.GetPlayer(1).Position)) .. "; "
     end
 end
 
 local function isPickupPayableTest()
-    debugTexts[1] = "Nearest Item: "
+    debugTexts[1] = "Nearest Pickup: "
     debugTexts[2] = "First entity: "
     local pickup = nil
     local enemy = nil
@@ -161,37 +166,46 @@ local function isPickupPayableTest()
     end
     pickup = BetterVoiding.getNearestPickup()
     for _, entity in pairs(Isaac.GetRoomEntities()) do
-        if entity.Type > 9 then
+        if entity.Type > 9 and entity.Type < 400 then
             enemy = entity
         end
     end
     if enemy == nil then
         debugTexts[2] = debugTexts[2] .. tostring(nil)
     else
-        debugTexts[2] = debugTexts[2] .. tostring(enemy.Type)
+        debugTexts[2] = debugTexts[2] .. tostring(enemy.Type) .. " "
         if pickup == nil then
             debugTexts[2] = debugTexts[2] .. tostring(nil)
         else
-            debugTexts[2] = debugTexts[2] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. "; " .. tostring(BetterVoiding.isPickupPayable(pickup))
+            debugTexts[2] = debugTexts[2] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. "; " .. tostring(BetterVoiding.isPickupPayable(pickup, enemy))
         end
     end
 end
 
 local function getNearestPayablePickupTest()
     debugTexts[1] = "Standard: "
-    debugTexts[2] = "TYPE COLL Player(1): "
+    debugTexts[2] = "COLL Player(1): "
+    debugTexts[3] = "CONS Player(0) Position(10,10): "
+    local position = nil
     local pickup = nil
     pickup = BetterVoiding.getNearestPayablePickup()
     if pickup == nil then
         debugTexts[1] = debugTexts[1] .. tostring(nil)
     else
-        debugTexts[1] = debugTexts[1] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. "; "
+        debugTexts[1] = debugTexts[1] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. " " .. math.floor(pickup.Position:Distance(Isaac.GetPlayer().Position)) .. "; "
     end
     pickup = BetterVoiding.getNearestPayablePickup(Isaac.GetPlayer(1), BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
     if pickup == nil then
         debugTexts[2] = debugTexts[2] .. tostring(nil)
     else
-        debugTexts[2] = debugTexts[2] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. "; "
+        debugTexts[2] = debugTexts[2] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. " " .. math.floor(pickup.Position:Distance(Isaac.GetPlayer(1).Position)) .. "; "
+    end
+    position = Vector(10,10)
+    pickup = BetterVoiding.getNearestPayablePickup(Isaac.GetPlayer(0), BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE, position)
+    if pickup == nil then
+        debugTexts[3] = debugTexts[3] .. tostring(nil)
+    else
+        debugTexts[3] = debugTexts[3] .. tostring(pickup.Variant) .. " " .. tostring(pickup.SubType) .. " " .. math.floor(pickup.Position:Distance(position)) .."; "
     end
 end
 
@@ -270,12 +284,12 @@ local function clonePickupTest()
         debugTexts[3] = "COLL Position (100,100): "
     end
     if playerData["clonePickupTest"] == 4 then
-        pickup = BetterVoiding.getNearestPickup(Isaac.GetPlayer(), BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        pickup = BetterVoiding.getNearestPickup(Isaac.GetPlayer().Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
         if pickup == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
         else
-            pickup = BetterVoiding.clonePickup(pickup, false, Vector(100,200))
+            pickup = BetterVoiding.clonePickup(pickup, true, Vector(100,200))
             if pickup == nil then
                 nextTest = false
                 debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -295,9 +309,9 @@ local function clonePickupTest()
 end
 
 local function selectPickupsTest()
-    debugTexts[4] = ""
-    debugTexts[5] = ""
-    debugTexts[6] = ""
+    debugTexts[4] = "VP: "
+    debugTexts[5] = "LP: "
+    debugTexts[6] = "RP: "
     local player = Isaac.GetPlayer(0)
     local playerData = player:GetData()
     local nextTest = true
@@ -306,44 +320,62 @@ local function selectPickupsTest()
     if playerData["selectPickupsTest"] == nil then
         playerData["selectPickupsTest"] = 0
         debugTexts[1] = "----"
-        debugTexts[2] = "Standard: "
+        debugTexts[2] = "Standard"
         allPickups = BetterVoiding.selectPickups()
-        debugTexts[3] = "Standard Player(1): "
+        debugTexts[3] = "Standard Player(1)"
     end
     if playerData["selectPickupsTest"] == 1 then
         allPickups = BetterVoiding.selectPickups(Isaac.GetPlayer(1))
-        debugTexts[3] = "V_NEAREST_PICKUP: "
+        debugTexts[3] = "V_NEAREST_PICKUP"
     end
     if playerData["selectPickupsTest"] == 2 then
         allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_NEAREST_PICKUP)
-        debugTexts[3] = "V_ALL_FREE_PICKUPS: "
+        debugTexts[3] = "V_ALL_FREE_PICKUPS"
     end
     if playerData["selectPickupsTest"] == 3 then
         allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS)
-        debugTexts[3] = "Nearest All Free COLL: "
+        debugTexts[3] = "Nearest All Free COLL"
     end
     if playerData["selectPickupsTest"] == 4 then
-        allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS | BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
-        debugTexts[3] = "Nearest CONS: "
+        allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS | BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        debugTexts[3] = "Nearest CONS"
     end
     if playerData["selectPickupsTest"] == 5 then
         allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
-        debugTexts[3] = "Nearest All Free COLL: "
+        debugTexts[3] = "Nearest COLL Position(10,10)"
     end
     if playerData["selectPickupsTest"] == 6 then
-        allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS | BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS | BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE, Vector(10,10))
+        debugTexts[3] = "Nearest COLL Position(COLL)"
+    end
+    if playerData["selectPickupsTest"] == 7 then
+        local pickup = BetterVoiding.getNearestPayablePickup(player, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        if pickup ~= nil then
+            allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS | BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE, pickup.Position)
+        else
+            nextTest = false
+            goto testEnd
+        end
+        debugTexts[3] = "Nearest All Free COLL"
+    end
+    if playerData["selectPickupsTest"] == 8 then
+        allPickups = BetterVoiding.selectPickups(player, BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS | BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
         nextTest = false
     end
-    for key, value in pairs(allPickups[1]) do
-        debugTexts[4] = debugTexts[4] .. tostring(key.SubType) .. " " .. tostring(value) .. "; "
+    if allPickups[1] == {} and allPickups[2] == {} and allPickups[3] == {} then
+        nextTest = false
+    else
+        for key, value in pairs(allPickups[1]) do
+            debugTexts[4] = debugTexts[4] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
+        end
+        for key, value in pairs(allPickups[2]) do
+            debugTexts[5] = debugTexts[5] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
+        end
+        for key, value in pairs(allPickups[3]) do
+            debugTexts[6] = debugTexts[6] .. tostring(key.SubType) .. " " .. tostring(math.floor(value)) .. "; "
+        end
     end
-    for key, value in pairs(allPickups[2]) do
-        debugTexts[5] = debugTexts[5] .. tostring(key.SubType) .. " " .. tostring(value) .. "; "
-    end
-    for key, value in pairs(allPickups[2]) do
-        debugTexts[6] = debugTexts[6] .. tostring(key.SubType) .. " " .. tostring(value) .. "; "
-    end
-
+    ::testEnd::
     if nextTest then
         debugTexts[1] = debugTexts[2]
         debugTexts[2] = debugTexts[3]
@@ -357,12 +389,12 @@ local function managePickupIndicesTest()
     local player = Isaac.GetPlayer(0)
     local playerData = player:GetData()
     local nextTest = true
-    local pickups
+    local pickups = {}
 
     if playerData["managePickupIndicesTest"] == nil then
         playerData["managePickupIndicesTest"] = 0
         debugTexts[1] = "----"
-        debugTexts[2] = "All pickups"
+        debugTexts[2] = "All Pickups: "
         local pickupsDist = BetterVoiding.calculatePickupDist()
         if pickupsDist == nil then
             nextTest = false
@@ -379,7 +411,7 @@ local function managePickupIndicesTest()
         debugTexts[3] = "All COLLS: "
     end
     if playerData["managePickupIndicesTest"] == 1 then
-        local pickupsDist = BetterVoiding.calculatePickupDist(player, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        local pickupsDist = BetterVoiding.calculatePickupDist(player.Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
         if pickupsDist == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -395,7 +427,7 @@ local function managePickupIndicesTest()
         debugTexts[3] = "Nearest COLL: "
     end
     if playerData["managePickupIndicesTest"] == 2 then
-        local pickup = BetterVoiding.getNearestPickup(player, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        local pickup = BetterVoiding.getNearestPickup(player.Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
         if pickup == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -405,14 +437,15 @@ local function managePickupIndicesTest()
                 debugTexts[2] = debugTexts[2] .. tostring(pickups[i].Variant) .. " " .. tostring(pickups[i].SubType) .. "; "
             end
         end
-        debugTexts[4] = "Try to stand next to not payable collectible (= nil)"
+        debugTexts[3] = "Nearest COLL: "
         nextTest = false
     end
 
+    debugTexts[1] = debugTexts[2]
+    debugTexts[2] = debugTexts[3]
+    debugTexts[3] = ""
+
     if nextTest then
-        debugTexts[1] = debugTexts[2]
-        debugTexts[2] = debugTexts[3]
-        debugTexts[3] = ""
         playerData["managePickupIndicesTest"] = playerData["managePickupIndicesTest"] + 1
     end
     return true
@@ -460,7 +493,7 @@ local function payPickupTest()
         debugTexts[3] = "COLL NotVoiding: "
     end
     if playerData["payPickupTest"] == 2 then
-        pickup = BetterVoiding.getNearestPickup(player, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        pickup = BetterVoiding.getNearestPickup(player.Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
         if pickup == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -476,7 +509,7 @@ local function payPickupTest()
         debugTexts[3] = "Player(1): "
     end
     if playerData["payPickupTest"] == 3 then
-        pickup = BetterVoiding.getNearestPickup(Isaac.GetPlayer(1))
+        pickup = BetterVoiding.getNearestPickup(Isaac.GetPlayer(1).Position)
         if pickup == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -516,7 +549,7 @@ local function payPickupTest()
         debugTexts[3] = "SOUL DEAL: "
     end
     if playerData["payPickupTest"] == 5 then
-        pickup = BetterVoiding.getNearestPickup(player, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE | BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS)
+        pickup = BetterVoiding.getNearestPickup(player.Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE | BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS)
         if pickup == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -533,7 +566,7 @@ local function payPickupTest()
         debugTexts[3] = "Spikes CONS: "
     end
     if playerData["payPickupTest"] == 6 then
-        pickup = BetterVoiding.getNearestPickup(player, BetterVoiding.PickupCategoryFlags.PC_PRICE_SPIKES | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
+        pickup = BetterVoiding.getNearestPickup(player.Position, BetterVoiding.PickupCategoryFlags.PC_PRICE_SPIKES | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
         if pickup == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -549,7 +582,7 @@ local function payPickupTest()
         debugTexts[3] = "Spikes COLL: "
     end
     if playerData["payPickupTest"] == 7 then
-        pickup = BetterVoiding.getNearestPickup(player, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        pickup = BetterVoiding.getNearestPickup(player.Position, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
         if pickup == nil then
             nextTest = false
             debugTexts[2] = debugTexts[2] .. tostring(nil)
@@ -604,64 +637,67 @@ local function betterVoidingItemConstructorTest()
         debugTexts[2] = "COLL Standard: "
         itemType = CollectibleType.COLLECTIBLE_BIBLE
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, itemType, player.Position, Vector(0,0), nil)
-        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE " "
-        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType)
-        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. tostring(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE) .. " "
+        BVIID[playerData["betterVoidingItemConstructorTest"]] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType, true)
+        debugTexts[2] = debugTexts[2] .. BVIID[playerData["betterVoidingItemConstructorTest"]] .. "; "
         debugTexts[3] = "COLL All Free Pickups: "
     end
     if playerData["betterVoidingItemConstructorTest"] == 1 then
         itemType = CollectibleType.COLLECTIBLE_BOOK_OF_BELIAL
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, itemType, player.Position, Vector(0,0), nil)
-        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE " "
-        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType
-            , BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS)
-        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. tostring(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE) .. " "
+        BVIID[playerData["betterVoidingItemConstructorTest"]] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType, true
+            , BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
+        debugTexts[2] = debugTexts[2] .. BVIID[playerData["betterVoidingItemConstructorTest"]] .. "; "
         debugTexts[3] = "COLL Standard GREEN: "
     end
     if playerData["betterVoidingItemConstructorTest"] == 2 then
         itemType = CollectibleType.COLLECTIBLE_NECRONOMICON
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, itemType, player.Position, Vector(0,0), nil)
-        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE " "
-        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType, nil, nil, Color(0.5, 1, 0.5, 1, 0, 0, 0))
-        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. tostring(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE) .. " "
+        BVIID[playerData["betterVoidingItemConstructorTest"]] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE, itemType, true, nil, nil, Color(0.5, 1, 0.5, 1, 0, 0, 0))
+        debugTexts[2] = debugTexts[2] .. BVIID[playerData["betterVoidingItemConstructorTest"]] .. "; "
         debugTexts[3] = "CARD Standard: "
     end
     if playerData["betterVoidingItemConstructorTest"] == 3 then
         itemType = Card.CARD_JUSTICE
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, itemType, player.Position, Vector(0,0), nil)
-        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_CARD " "
-        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_CARD, itemType)
-        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. tostring(BetterVoiding.BetterVoidingItemType.TYPE_CARD) .. " "
+        BVIID[playerData["betterVoidingItemConstructorTest"]] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_CARD, itemType, true)
+        debugTexts[2] = debugTexts[2] .. BVIID[playerData["betterVoidingItemConstructorTest"]] .. "; "
         debugTexts[3] = "CARD Nearest Pickup: "
     end
     if playerData["betterVoidingItemConstructorTest"] == 4 then
         itemType = Card.CARD_MAGICIAN
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, itemType, player.Position, Vector(0,0), nil)
-        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_CARD " "
-        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_CARD, itemType
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. tostring(BetterVoiding.BetterVoidingItemType.TYPE_CARD) .. " "
+        BVIID[playerData["betterVoidingItemConstructorTest"]] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_CARD, itemType, true
             , BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS)
-        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[2] = debugTexts[2] .. BVIID[playerData["betterVoidingItemConstructorTest"]] .. "; "
         debugTexts[3] = "PILL All Free CONS: "
+-- <<< Skip Pills >>>
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, CollectibleType.COLLECTIBLE_BEAN, player.Position, Vector(0,0), nil)        -- 5.100.111
+        nextTest = false
     end
     if playerData["betterVoidingItemConstructorTest"] == 5 then
         local pillColor = PillColor.PILL_BLUE_BLUE
         itemType = Game():GetItemPool():GetPillEffect(pillColor)
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_PILL, itemType, player.Position, Vector(0,0), nil)
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_PILL, itemType, player.Position, Vector(0,0), nil)
-        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_PILL " "
-        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_PILL, itemType
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. tostring(BetterVoiding.BetterVoidingItemType.TYPE_PILL) .. " "
+        BVIID[playerData["betterVoidingItemConstructorTest"]] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_PILL, itemType, true
             , BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS, BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE)
-        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[2] = debugTexts[2] .. BVIID[playerData["betterVoidingItemConstructorTest"]] .. "; "
         debugTexts[3] = "PILL Nearest COLL: "
     end
     if playerData["betterVoidingItemConstructorTest"] == 6 then
         local pillColor = PillColor.PILL_ORANGE_ORANGE
         itemType = Game():GetItemPool():GetPillEffect(pillColor)
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_PILL, itemType, player.Position, Vector(0,0), nil)
-        debugTexts[2] = debugTexts[2] .. itemType .. " " .. BetterVoiding.BetterVoidingItemType.TYPE_PILL " "
-        BVIID["betterVoidingItemConstructorTest"] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_PILL, itemType
+        debugTexts[2] = debugTexts[2] .. itemType .. " " .. tostring(BetterVoiding.BetterVoidingItemType.TYPE_PILL) .. " "
+        BVIID[playerData["betterVoidingItemConstructorTest"]] = BetterVoiding.betterVoidingItemConstructor(BetterVoiding.BetterVoidingItemType.TYPE_PILL, itemType, true
             , BetterVoiding.VoidingFlags.V_NEAREST_PICKUP, BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE)
-        debugTexts[2] = debugTexts[2] .. BVIID["betterVoidingItemConstructorTest"] .. "; "
+        debugTexts[2] = debugTexts[2] .. BVIID[playerData["betterVoidingItemConstructorTest"]] .. "; "
         debugTexts[4] = "Lets go for the next Test. Take the item!"
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, CollectibleType.COLLECTIBLE_BEAN, player.Position, Vector(0,0), nil)        -- 5.100.111
         nextTest = false
@@ -679,34 +715,43 @@ local function betterVoidingTest()
     local player = Isaac.GetPlayer(0)
     local playerData = player:GetData()
     local nextTest = true
-    local allItems
+    local allItems = {}
 
     if playerData["betterVoidingTest"] == nil then
         playerData["betterVoidingTest"] = 0
         debugTexts[1] = "----"
         debugTexts[2] = "COLL Standard: "
+        debugTexts[2] = debugTexts[2] .. " " .. tostring(BVIID[0]) .. "; "
         allItems = BetterVoiding.betterVoiding(BVIID[0])
         debugTexts[3] = "COLL Standard Player(1): "
     end
     if playerData["betterVoidingTest"] == 1 then
+        debugTexts[2] = debugTexts[2] .. " " .. tostring(BVIID[0]) .. "; "
         allItems = BetterVoiding.betterVoiding(BVIID[0], Isaac.GetPlayer(1))
         debugTexts[3] = "CARD Nearest Pickup: "
     end
     if playerData["betterVoidingTest"] == 2 then
+        debugTexts[2] = debugTexts[2] .. " " .. tostring(BVIID[4]) .. "; "
         allItems = BetterVoiding.betterVoiding(BVIID[4])
         debugTexts[3] = "PILL All Free CONS: "
     end
     if playerData["betterVoidingTest"] == 3 then
+    debugTexts[2] = debugTexts[2] .. " " .. tostring(BVIID[5]) .. "; "
         allItems = BetterVoiding.betterVoiding(BVIID[5])
         debugTexts[3] = "COLL Standard: "
     end
     if playerData["betterVoidingTest"] == 4 then
+        debugTexts[2] = debugTexts[2] .. " " .. tostring(BVIID[0]) .. "; "
         allItems = BetterVoiding.betterVoiding(BVIID[0])
         nextTest = false
     end
-
-    for item, dist in pairs(allItems) do
-        debugTexts[2] = debugTexts[2] .. tonumber(item.SubType) .. " " .. tonumber(dist) .. "; "
+    if allItems ~= nil then
+        for item, dist in pairs(allItems) do
+            debugTexts[2] = debugTexts[2] .. tonumber(item.SubType) .. " " .. math.floor(tonumber(dist)) .. "; "
+        end
+    else
+        debugTexts[2] = debugTexts[2] .. tostring(nil) .. " "
+        nextTest = false
     end
     if nextTest then
         debugTexts[1] = debugTexts[2]
@@ -717,7 +762,7 @@ local function betterVoidingTest()
     return true
 end
 
---betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, calculatePickupDistTest) local function setTitle() debugTexts[0] = "CalculatePickupDistTest" end
+betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, calculatePickupDistTest) local function setTitle() debugTexts[0] = "CalculatePickupDistTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, getNearestPickupTest) local function setTitle() debugTexts[0] = "GetNearestPickupTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, isPickupPayableTest) local function setTitle() debugTexts[0] = "IsPickupPayableTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, getNearestPayablePickupTest) local function setTitle() debugTexts[0] = "GetNearestPayablePickupTest" end
@@ -725,7 +770,7 @@ end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, selectPickupsTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "SelectPickupsTest" end -- 5.100.294
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, managePickupIndicesTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "ManagePickupIndicesTest" end -- 5.100.294
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, payPickupTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "PayPickupTest" end -- 5.100.294
---betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingItemConstructorTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "BetterVoidingItemConstructorTest" end betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN)
+--betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingItemConstructorTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "BetterVoidingItemConstructorTest" end betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingTest, CollectibleType.COLLECTIBLE_BEAN)
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function drawDebugText()

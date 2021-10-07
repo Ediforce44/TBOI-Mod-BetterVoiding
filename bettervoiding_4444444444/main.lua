@@ -227,7 +227,7 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Determins all pickups in the current room, which match flagsPC (default = PC_ALL_PICKUPS | PC_TYPE_COLLECTIBLE) and
 --- their distance to position (default = Player_0.Position)
------ @Return: Table of (Keys: Pickups, Values: Distance between the pickup and position)
+----- @Return: KeyTable of (Keys: Pickups, Values: Distance between the pickup and position)
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.calculatePickupDist(position, flagsPC)
     position = position or Isaac.GetPlayer().Position
@@ -255,7 +255,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Returns nearest flagsPC (default = PC_ALL_PICKUPS) matching pickup to position (default = Player_0.Position)
------ @Return: Nearest collectible
+----- @Return: Nearest pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.getNearestPickup(position, flagsPC)
     flagsPC = flagsPC or BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS
@@ -725,7 +725,8 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Needs to be called if BetterVoiding item is added to the game. The function needs the betterVoidingItemType and itemType of the
 --- BetterVoiding item. The new BetterVoiding item get registered with flagsV, flagsPC and preVoidingColor (default = grey).
--- If generateModCallback is true, a ModCallback is automatically created for the BetterVoiding item, otherwise you have to do it manually.
+-- If generateModCallback is true, a ModCallback is automatically created for the BetterVoiding item,
+--- otherwise you have to implement the function betterVoiding() in your own ModCallback for the item.
 -- If betterVoidingItemType is CARD or PILL, the item will be used first then apply BetterVoiding functions and then used a second time.
 ----- @Return: ID for this BetterVoiding item
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -776,7 +777,7 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Prepares everything for voiding pickups with a BetterVoiding item associated with the betterVoidingItemID and
 --- based on sourceEntity (default = Player_0)
------ @Return: Table of (Keys: Remaining voidable pickups, Values: Distance to sourceEntity)
+----- @Return: KeyTable of (Keys: Remaining voidable pickups, Values: Distance to sourceEntity)
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
     if betterVoidingItemID == nil then return nil end

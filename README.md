@@ -23,7 +23,7 @@ Now let's start talking about the Better Voiding API.
 
 ## API Member
 
-> Don't forget to use a `BetterVoiding.` in front of them if you want to access any of the members.
+> Don't forget to use a `BetterVoiding.` in front of them, if you want to access any of the members.
 - **Fields**
    - `VoidingFlags` Is an Enum, which can easily be used to set Voiding Flags for your functions from this API.
    - `PickupCategoryFlags` Is also an Enum, which can be used to set Pickup Category Flags for functions from this API.
@@ -52,4 +52,46 @@ Now let's start talking about the Better Voiding API.
     - It returns an *Enum*, which consits of two keyTables. The first one for the Variants of the pickups and the second one for the SubTypes. One index in both tables represents one selected pickup.
 
 ## How to add a Better Voiding item
+
+If you have already created a voiding item mod or you want simply creat a voiding item, there is one easy way to turn it into a Better Voiding item. **But maybe it's not the best way. So also look at example [2].**
+- Example[1] Add a Better Voiding item, which voids the nearest heart deal to the player and all free collectibles:
+    
+        local exampleItemType = 1234 
+        local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE
+        local preVoidingColor = Color(0.5, 0.5, 1, 1, 0, 0, 0)
+        local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP | BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS
+        local flagsPC = BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE
+        local exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, true, flagsV, flagsPC, preVoidingColor)
+        ...
+        local function voiding()
+            Get all free collectibles in the room and
+            Do what your voiding item does
+        end
+        ...
+        mod:AddCallback(ModCallbacks.MC_USE_ITEM, voiding, exampleItemType)
+
+    - And that's it. The only important thing is that you call the **betterVoidingItemConstructor()**, which pays the pickups and makes them free
+    > But maybe you realise that you can't do complex things with this. Like voiding only the nearest heart deal. Why? Because you don't know how to get it in your *voiding()* function. Or you want to do something with alternate item choices (same OptionsPickupIndex). But that is possible with the next **Example[2]**, if you use **betterVoiding()**
+
+- Example[2] Add a Better Voiding item, but manage the voiding manually. The Better Voiding item is a card and voids the nearest consumable to isaac, which costs coins:
+
+        local exampleItemType = 123
+        local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
+        local preVoidingColor = Color(0.5, 0.5, 0, 1, 0, 0, 0)
+        local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP
+        local flagsPC = BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE
+        local exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, false, flagsV, flagsPC, preVoidingColor)
+        ...
+        local function voiding()
+            local consumablesForVoiding = BetterVoiding.betterVoiding(exampleBVIID)[1]
+            for cons, dist in pairs(consumablesForVoiding)
+                Do what your voiding item does
+            end
+        end
+        ...
+        mod:AddCallback(ModCallbacks.MC_USE_CARD, voiding, exampleItemType)
+
+    - If you want that the voidable pickups get automatically removed, just call **betterVoidingRA()** instead of **betterVoiding()**.
+
+## If you have any ideas for improvement or wishes (for example: more Flags) just let me know. You can contact me via discord: Ediforce44#3385
 

@@ -35,11 +35,11 @@ BetterVoiding.VoidingFlags = {
 -- Flags to select pickups in a room
 BetterVoiding.PickupCategoryFlags = {
     PC_ALL_PICKUPS = 0,
-    PC_PRICE_FREE = 1<<0,
+    PC_PRICE_FREE = 1<<0,                   --PickupPrices
     PC_PRICE_HEARTS = 1<<1,
     PC_PRICE_COINS = 1<<2,
     PC_PRICE_SPIKES = 1<<3,
-    PC_TYPE_COLLECTIBLE = 1<<10,
+    PC_TYPE_COLLECTIBLE = 1<<10,            --PickupTypes
     PC_TYPE_TRINKET = 1<<11,
     PC_TYPE_PILL = 1<<12,
     PC_TYPE_CARD = 1<<13,
@@ -174,7 +174,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Returns a LookUpTable for flagsPC
------ @Return: Lookup Table of (Keys: PickupPrices and Variants, Values: boolean)
+----- @Return: Lookup Table of (Keys: PickupPrices and Variants, Values: True if this price or variant is allowed, nil otherwise6)
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function getLookUpTableForPCFlags(flagsPC)
     local flagsLUT = {}
@@ -344,7 +344,7 @@ function BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC, position)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Clones pickup on the next free position to clonePosition (default = pickup.Position)
+-- Clones pickup on the next free position to clonePosition (default = pickup.Position) with/without a cloneAnimation (default = true)
 ----- @Return: Cloned pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
@@ -380,7 +380,11 @@ function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- TODO
+-- Sorts all flagsPC matching pickups in a room based on flagsV, sourceEntity and position.
+-- selectedPickups are the selected pickups by flagsV and sourceEntity or position.
+-- lostPickups are all pickups which will get lost if the selectedPickups are picked up. (determined by OptionsPickup Index)
+-- remainingPickups are all leftover pickups, which matches flagsPC but didn't get selected or get lost.
+----- @Return: Table of 3 keyTables (selectedPickups, lostPickups, remainingPickups) For each: (Keys: Pickup, Values: Distance form position to pickup)
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC, position)
     sourceEntity = sourceEntity or Isaac.GetPlayer(0)
@@ -485,11 +489,12 @@ function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC, position)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- TODO
--- nicht geeignet für liste an refPickups; zu viel overhead; benutze lieber selectPickups und manage manuell
+-- Selects pickups out of Table refPickups with different OptionsPickupIndices and despawns all pickups with the same OpitonsPickupIndex.
+-- The first pickup in refPickup with a new OptionsPickupIndex is taken, if it contains more than one pickup with the same OptionsPickupIndex.
+----- @Return: Table of (Values: Selected pickups) (Order: Same as in refPickups)
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.managePickupIndices(refPickups)
-    if refPickups == nil then return nil end
+    refPickups = refPickups or {}
 
     local pickupIndex = 0
     local pickupIndexTables = {}
@@ -501,14 +506,14 @@ function BetterVoiding.managePickupIndices(refPickups)
     for i=1, #refPickups do
         pickupIndexTables[refPickups[i].OptionsPickupIndex] = {}
     end
-    -- Group remainingPickups by OptionsPickupIndex
+    -- Group allPickups by OptionsPickupIndex
     for pickup, dist in pairs(allPickups) do
         pickupIndex = pickup.OptionsPickupIndex
         if pickupIndexTables[pickupIndex] ~= nil then
             pickupIndexTables[pickupIndex][pickup] = dist
         end
     end
-    -- Select and despawn pickups
+    -- Select or despawn pickups
     for i=1, #refPickups do
         pickupIndex = refPickups[i].OptionsPickupIndex
         pickupTable = pickupIndexTables[pickupIndex]
@@ -520,7 +525,7 @@ function BetterVoiding.managePickupIndices(refPickups)
             elseif pickup.OptionsPickupIndex ~= 0 then
                 -- Remove all other pickups with same OptionsPickupIndex and play POOF animation
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, pickup.Position, Vector(0,0), pickup)
-                pickupTable[pickup] = nil      --Fix multiple items with same OptionsPickupIndex in refPickup
+                pickupTable[pickup] = nil      --fix multiple items with same OptionsPickupIndex in refPickup
                 pickup:Remove()
             end
         end
@@ -531,7 +536,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Let sourceEntity (default = Player_0) pay for pickup.
--- If the pickup, which will be payed, is not forVoiding, it will be moved next to the restocked pickup (in a restockable shop)
+-- If the pickup is not forVoiding (default = true), it will be moved next to the restocked pickup (in a restockable shop)
 ----- @Return: Payed pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
@@ -674,6 +679,10 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------------------
 
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Global access
+-------------------------------------------------------------------------------------------------------------------------------------------
+
 -- Function for already existing voiding-collectibles and their ModCallbacks to turn them into BetterVoiding items
 local function betterVoidingColls(_, collType, _, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
@@ -715,9 +724,9 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Needs to be called if BetterVoiding item is added to the game. The function needs the betterVoidingItemType and itemType of the
---- BetterVoiding item. The new BetterVoiding item get registered with flagsV, flagsPC and preVoidingColor (default = grey)
---- If generateModCallback is true, a ModCallback is automatically created for the BetterVoiding item, otherwise you have to do it manually.
----- If betterVoidingItemType is CARD or PILL, the item will be used first then apply BetterVoiding functions and then used a second time.
+--- BetterVoiding item. The new BetterVoiding item get registered with flagsV, flagsPC and preVoidingColor (default = grey).
+-- If generateModCallback is true, a ModCallback is automatically created for the BetterVoiding item, otherwise you have to do it manually.
+-- If betterVoidingItemType is CARD or PILL, the item will be used first then apply BetterVoiding functions and then used a second time.
 ----- @Return: ID for this BetterVoiding item
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemType, generateModCallback, flagsV, flagsPC, preVoidingColor)
@@ -765,12 +774,6 @@ function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemT
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
-modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, Isaac.GetItemIdByName("Void"))
-modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, Isaac.GetItemIdByName("Abyss"))
-modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, Card.RUNE_BLACK)
--------------------------------------------------------------------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------------------------------------------------------------------
 -- Prepares everything for voiding pickups with a BetterVoiding item associated with the betterVoidingItemID and
 --- based on sourceEntity (default = Player_0)
 ----- @Return: Table of (Keys: Remaining voidable pickups, Values: Distance to sourceEntity)
@@ -809,7 +812,6 @@ function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
     return allPickups[1]
 end
 
-
 --        <<< Including removing collectible(s) and play animation >>>
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Voids ALL pickups with a BetterVoiding item associated with the betterVoidingItemID and
@@ -839,6 +841,17 @@ function BetterVoiding.betterVoidingRA(betterVoidingItemID, sourceEntity)
 
     return voidedPickups
 end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Already existing voiding items
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, Isaac.GetItemIdByName("Void"))
+modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, Isaac.GetItemIdByName("Abyss"))
+modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, Card.RUNE_BLACK)
+-------------------------------------------------------------------------------------------------------------------------------------------
+
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- GENESIS FIX (Fix Genesis as well as possible)
@@ -876,7 +889,8 @@ modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_UPDATE, genesisFix)
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Spawns and Play a PreVoidingAnimation at the same position of parentItem with color
+-- Spawns and Play a PreVoidingAnimation at the same position of parentItem with color.
+-- The animationEntitys and sprites are added to the keyTables preVoidingAnmEntity and preVoidingAnmSprites with Key GetPtrHash(parentItem)
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function spawnPreVoidingAnimation(color, parentItem)
     local preVoidingEntity = preVoidingAnmEntitys[GetPtrHash(parentItem)]
@@ -900,8 +914,9 @@ local function spawnPreVoidingAnimation(color, parentItem)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- TODO
--- Erkären was eine preVoiding animation ist: PreVoiding animations will be removed if the corresponding pickup is removed
+-- If the player holdes a BetterVoiding item in an active slot and if it is fully charged, a PreVoidingAnimation is spawn for each pickup,
+--- which the BetterVoiding item will void. ORDER: PillSlot > ActiveSlot
+-- The PreVoidingAnimations are spawned synchronously, by waiting for all PreVoidingAnimations to end before starting them again.
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function preVoidingAnimation()
     local betterVoidingItemType = -1
@@ -910,7 +925,7 @@ local function preVoidingAnimation()
     local betterVoidingItemTable = nil
     local betterVoidingItemIndex = -1
     local playerEntity = nil
-    local allColls = {}
+    local allVoidablePickups = {}
 
     -- The PreVoidingAnimation is calculated based an the first player with an fully charged BetterVoiding item in an active slot
     for playerIndex=0, 3 do   --for each player
@@ -956,19 +971,39 @@ local function preVoidingAnimation()
             itemType = itemTypeAlt
             itemTypeAlt = 0
             goto checkForBetterVoidingItem
-            -- Check if all PreVoidingAnimations are finished
+            -- PreVoidingAnimation
             ::ignoreActiveItem::
-            for _, sprite in pairs(preVoidingAnmSprites) do
-                if sprite:IsPlaying("Mark1") then
-                    return
+            allVoidablePickups = BetterVoiding.selectPickups(playerEntity, betterVoidingItemTable.V_FLAGS[betterVoidingItemIndex]
+                , betterVoidingItemTable.PC_FLAGS[betterVoidingItemIndex])[1]
+
+            --[[ Alternate PreVoidingAnimaiton behaviour
+            local newPickupExists = false
+            for pickup, _ in pairs(allVoidablePickups) do
+                if preVoidingAnmSprites[GetPtrHash(pickup)] == nil then
+                    newPickupExists = true
                 end
             end
-            -- Start for every voidable pickup a new PreVoidingAnimation
-            allColls = BetterVoiding.selectPickups(playerEntity, betterVoidingItemTable.V_FLAGS[betterVoidingItemIndex]
-                , betterVoidingItemTable.PC_FLAGS[betterVoidingItemIndex])
-            for coll, _ in pairs(allColls[1]) do
-                spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[betterVoidingItemIndex], coll)
-            end
+            if newPickupExists then
+                for _, sprite in pairs(preVoidingAnmSprites) do
+                    --sprite:Reset()
+                end
+                preVoidingAnmSprites = {}       --reset keyTable preVoidingAnmSprites
+                for pickup, _ in pairs(allVoidablePickups) do
+                    spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[betterVoidingItemIndex], pickup)
+                end
+            else--]]
+
+                -- Check if all PreVoidingAnimations are finished
+                for _, sprite in pairs(preVoidingAnmSprites) do
+                    if sprite:IsPlaying("Mark1") then
+                        return
+                    end
+                end
+                -- Start for every voidable pickup a new PreVoidingAnimation
+                for pickup, _ in pairs(allVoidablePickups) do
+                    spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[betterVoidingItemIndex], pickup)
+                end
+            --end
             return
         end
         ::skipThisPlayer::
@@ -977,6 +1012,9 @@ end
 
 -- Resets the table which stores PreVoidingAnimation entities and sprites
 local function resetPreVoidingAnimations()
+    for _, anmEntity in pairs(preVoidingAnmEntitys) do
+        anmEntity:Remove()
+    end
     preVoidingAnmEntitys = {}
     preVoidingAnmSprites = {}
 end

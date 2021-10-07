@@ -909,7 +909,7 @@ local function spawnPreVoidingAnimation(color, parentItem)
     preVoidingSprite.PlaybackSpeed = 0.9
     preVoidingSprite.Scale = Vector(1, 1.2)
     preVoidingSprite.Color = color
-    preVoidingSprite:Play("Mark1", true)
+    preVoidingSprite:Play("Mark1.1", true)
     preVoidingAnmSprites[GetPtrHash(parentItem)] = preVoidingSprite
 end
 
@@ -995,7 +995,7 @@ local function preVoidingAnimation()
 
                 -- Check if all PreVoidingAnimations are finished
                 for _, sprite in pairs(preVoidingAnmSprites) do
-                    if sprite:IsPlaying("Mark1") then
+                    if sprite:IsPlaying("Mark1.1") then
                         return
                     end
                 end

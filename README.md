@@ -54,7 +54,7 @@ Now let's start talking about the Better Voiding API.
 ## How to add a Better Voiding item
 
 If you have already created a voiding item mod or you want simply creat a voiding item, there is one easy way to turn it into a Better Voiding item. **But maybe it's not the best way. So also look at example [2].**
-- Example[1] Add a Better Voiding item, which voids the nearest heart deal to the player and all free collectibles:
+- **Example[1]** Add a Better Voiding item, which voids the nearest heart deal to the player and all free collectibles:
     ```lua
     local exampleItemType = 1234 
     local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE
@@ -74,7 +74,7 @@ If you have already created a voiding item mod or you want simply creat a voidin
      - And that's it. The only important thing is that you call the `betterVoidingItemConstructor()`, which pays the pickups and makes them free
         > But maybe you realise that you can't do complex things with this. Like voiding only the nearest heart deal. Why? Because you don't know how to get it in your *voiding()* function. Or you want to do something with alternate item choices (same OptionsPickupIndex). But that is possible with the next **Example[2]**, if you use `betterVoiding()`.
 
-- Example[2] Add a Better Voiding item, but manage the voiding manually. The Better Voiding item is a card and voids the nearest consumable to isaac, which costs coins:
+- **Example[2]** Add a Better Voiding item, but manage the voiding manually. The Better Voiding item is a card and voids the nearest consumable to isaac, which costs coins:
 
     ```lua
     local exampleItemType = 123

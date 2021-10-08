@@ -787,6 +787,7 @@ function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
     local itemType = betterVoidingItemID >> 3       --get the itemType out of betterVoidingItemID
     local betterVoidingItemIndex = -1
     local allPickups = {}
+    local voidablePickups = {}
 
     -- Get the index of the BetterVoiding item in itemTable
     for i=1, itemTable.COUNT do
@@ -802,15 +803,18 @@ function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
 
     -- Prepare allPickups in the room for voiding
     allPickups = BetterVoiding.selectPickups(sourceEntity, itemTable.V_FLAGS[betterVoidingItemIndex], itemTable.PC_FLAGS[betterVoidingItemIndex])
-    for voidablePickup, _ in pairs(allPickups[1]) do
-        BetterVoiding.payPickup(voidablePickup, sourceEntity, true)
+    for voidablePickup, dist in pairs(allPickups[1]) do
+        local payedPickup = BetterVoiding.payPickup(voidablePickup, sourceEntity, true)
+        if payedPickup ~= nil then
+            voidablePickups[payedPickup] = dist
+        end
     end
     for lostPickup, _ in pairs(allPickups[2]) do
         Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 1, lostPickup.Position, Vector(0,0), lostPickup)
         lostPickup:Remove()
     end
 
-    return allPickups[1]
+    return voidablePickups
 end
 
 --        <<< Including removing collectible(s) and play animation >>>

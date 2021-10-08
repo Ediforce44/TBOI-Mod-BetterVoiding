@@ -1,9 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<metadata>
-    <name>Better Voiding</name>
-    <directory>bettervoiding</directory>
-    <id>2622094959</id>
-    <description> Better Voiding Mod and API
+Better Voiding Mod and API
 
 Are you tired of having black rune blocking your pillslot and you don't find bad items to void?
 Are you tired of seeing plenty of crabby items in the shop which you can't void?
@@ -19,12 +14,4 @@ If you have already wrote a mod which adds voiding items (Collectibles, Cards or
 But this mod isn't only for voiding items. It provides a API for managing all types of pickups and in this version the main focus is the distance between entities and pickups.
 If you want to start implementing the Better Voiding API, it's good to start by reading the Readme.txt in the mod folder or better take a look at my GitHub repository and read the REAME.md
 
-GitHub: https://github.com/Ediforce44/TBOI_Better-Voding</description>
-    <version>0.12</version>
-    <visibility>Private</visibility>
-    <tag id="Lua"/>
-    <tag id="Items"/>
-    <tag id="Active Items"/>
-    <tag id="Pickups"/>
-    <tag id="Tweaks"/>
-</metadata>
+GitHub: https://github.com/Ediforce44/TBOI_Better-Voding

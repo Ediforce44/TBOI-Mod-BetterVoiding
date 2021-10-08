@@ -1,5 +1,11 @@
 # Better Voiding API
 
+## Preamble
+
+This is my first mod for The Binding of Isaac. So I don't know what I did. Just kidding. But if you want to help me and find better solutions for problems, that I solved in this mod, you can contact me.
+Also just let me know if you have any ideas for improvement or wishes (for example: more Flags).
+You can contact me via Discord: Ediforce44#3385
+
 ## Introduction
 
 - This is a mod for The Binding of Isaac: Repentance.
@@ -56,7 +62,7 @@ Now let's start talking about the Better Voiding API.
 If you have already created a voiding item mod or you want simply creat a voiding item, there is one easy way to turn it into a Better Voiding item. **But maybe it's not the best way. So also look at example [2].**
 - **Example[1]** Add a Better Voiding item, which voids the nearest heart deal to the player and all free collectibles:
     ```lua
-    local exampleItemType = 1234 
+    local exampleItemType = Isaac.GetItemIdByName("Example Item")
     local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE
     local preVoidingColor = Color(0.5, 0.5, 1, 1, 0, 0, 0)
     local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP | BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS
@@ -77,7 +83,7 @@ If you have already created a voiding item mod or you want simply creat a voidin
 - **Example[2]** Add a Better Voiding item, but manage the voiding manually. The Better Voiding item is a card and voids the nearest consumable to isaac, which costs coins:
 
     ```lua
-    local exampleItemType = 123
+    local exampleItemType = Isaac.GetCardIdByName("Example Card")
     local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
     local preVoidingColor = Color(0.5, 0.5, 0, 1, 0, 0, 0)
     local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP
@@ -85,7 +91,7 @@ If you have already created a voiding item mod or you want simply creat a voidin
     local exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, false, flagsV, flagsPC, preVoidingColor)
 
     local function voiding()
-        local consumablesForVoiding = BetterVoiding.betterVoiding(exampleBVIID)[1]
+        local consumablesForVoiding = BetterVoiding.betterVoiding(exampleBVIID)
         for cons, dist in pairs(consumablesForVoiding)
             Do what your voiding item does
         end

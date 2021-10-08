@@ -20,7 +20,7 @@ But this mod isn't only for voiding items. It provides a API for managing all ty
 If you want to start implementing the Better Voiding API, it's good to start by reading the Readme.txt in the mod folder or better take a look at my GitHub repository and read the REAME.md
 
 GitHub: https://github.com/Ediforce44/TBOI_Better-Voding</description>
-    <version>0.12</version>
+    <version>0.13</version>
     <visibility>Private</visibility>
     <tag id="Lua"/>
     <tag id="Items"/>

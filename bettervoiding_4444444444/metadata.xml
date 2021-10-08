@@ -5,6 +5,7 @@
     <id>2622094959</id>
     <description> Better Voiding Mod and API
 
+[h1] Better Voiding Mod [/h1]
 Are you tired of having black rune blocking your pillslot and you don't find bad items to void?
 Are you tired of seeing plenty of crabby items in the shop which you can't void?
 Are you tired of having two billion coins, but there is no way to spend them usefully?
@@ -14,13 +15,13 @@ Better Voiding items not only void all free items like the original voiding item
 But don't worry, there is also a Pre Voiding Animation added for each Better Voiding item. If you hold a Better Voiding item in an active slot and if it is fully charged, a Pre Voiding Animations are spawned.
 Pre Voiding Animations are spawned beneath each item, which will be voided if you use the Better Voiding item. So you see, it's very hard to mess it up and die, because you accidentally void a heart deal. Isn't it Olexa?
 
-For Modders:
+[h1] Better Voiding API [/h1]
 If you have already wrote a mod which adds voiding items (Collectibles, Cards or Pills) and want to turn them into Better Voiding items, it takes only 1 to 2 lines of code extra to do so. The same goes for modders, who want specifically add Better Voiding items.
 But this mod isn't only for voiding items. It provides a API for managing all types of pickups and in this version the main focus is the distance between entities and pickups.
 If you want to start implementing the Better Voiding API, it's good to start by reading the Readme.txt in the mod folder or better take a look at my GitHub repository and read the REAME.md
 
-GitHub: https://github.com/Ediforce44/TBOI_Better-Voding</description>
-    <version>0.13</version>
+GitHub: https://github.com/Ediforce44/TBOI_Better-Voiding</description>
+    <version>0.15</version>
     <visibility>Private</visibility>
     <tag id="Lua"/>
     <tag id="Items"/>

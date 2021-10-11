@@ -21,7 +21,7 @@ Introduction
 
 What is a Better Voiding Item?
 -------------------------------------------------------------------------------------------------------------------------------------------
-- A Better Voiding item can pay any pickup in the game you want, if Better Voiding item can void the pickup.
+- A Better Voiding item can pay any pickup in the game you want, if it can void the pickup.
 - It also indicates which pickups got payed or voided by playing a Pre Voiding Animation beneath it, as long as the Better Voiding item is 
     hold in an active slot and is fully charged.
 -------------------------------------------------------------------------------------------------------------------------------------------

@@ -3,26 +3,23 @@
     <name>Better Voiding</name>
     <directory>bettervoiding</directory>
     <id>2622094959</id>
-    <description> Better Voiding Mod and API
+    <description> Better Voiding API and Mod
 
 [h1] Better Voiding Mod [/h1]
-Are you tired of having black rune blocking your pillslot and you don't find bad items to void?
-Are you tired of seeing plenty of crabby items in the shop which you can't void?
-Are you tired of having two billion coins, but there is no way to spend them usefully?
-
-Now the Better Voiding mechanic is here! It turns every voiding item into a Better Voiding item and it is even a relative huge API for everyone who wants to do something with pickups. But later more.
-Better Voiding items not only void all free items like the original voiding items it does. No, they also pay the nearest payable item to the player and then void them. But watch out you still have to pay the price for it.
-But don't worry, there is also a Pre Voiding Animation added for each Better Voiding item. If you hold a Better Voiding item in an active slot and if it is fully charged, a Pre Voiding Animations are spawned.
-Pre Voiding Animations are spawned beneath each item, which will be voided if you use the Better Voiding item. So you see, it's very hard to mess it up and die, because you accidentally void a heart deal. Isn't it Olexa?
+This mod is more like an esthetic Feature, than a new mechanic.
+It turns every voiding item into a Better Voiding item. Better Voiding change the way you void items. Existing items can still void Collectibles, which the player is holding over its head and they do a lot more.
+They also pay the nearest payable item to the player and then void them. There is also a Pre Voiding Animation added for each Better Voiding item. If you hold a Better Voiding item in an active slot and if it is fully charged, a Pre Voiding Animations are spawned.
+Pre Voiding Animations are spawned beneath each item, which will be voided if you use the Better Voiding item. So you see, it's very hard to mess it up and die, because you accidentally void a heart deal.
 
 [h1] Better Voiding API [/h1]
+The main point of this mod is the API, which it offers to all other mods. It allows you to do a lot with pickups and simply create new Better Voiding items.
 If you have already wrote a mod which adds voiding items (Collectibles, Cards or Pills) and want to turn them into Better Voiding items, it takes only 1 to 2 lines of code extra to do so. The same goes for modders, who want specifically add Better Voiding items.
 But this mod isn't only for voiding items. It provides a API for managing all types of pickups and in this version the main focus is the distance between entities and pickups.
 If you want to start implementing the Better Voiding API, it's good to start by reading the Readme.txt in the mod folder or better take a look at my GitHub repository and read the REAME.md
 
 GitHub: https://github.com/Ediforce44/TBOI_Better-Voiding</description>
-    <version>0.15</version>
-    <visibility>Private</visibility>
+    <version>1.0</version>
+    <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Items"/>
     <tag id="Active Items"/>

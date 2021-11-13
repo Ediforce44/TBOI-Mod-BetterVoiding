@@ -939,85 +939,68 @@ local function preVoidingAnimation()
     local playerEntity = nil
     local allVoidablePickups = {}
 
-    -- The PreVoidingAnimation is calculated based an the first player with an fully charged BetterVoiding item in an active slot
-    for playerIndex=0, 3 do   --for each player
-        playerEntity = Isaac.GetPlayer(playerIndex)
-        if (playerIndex == 0) or (GetPtrHash(playerEntity) ~= GetPtrHash(Isaac.GetPlayer(0))) then
-            -- Check if the playerEntity holdes an BetterVoiding item in an active slot (ORDER: Card, Pill, PocketActiveItem, ActiveItem)
-            betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
-            itemType = playerEntity:GetCard(0)
-            if (itemType == 0) then
-                betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_PILL
-                itemType = playerEntity:GetPill(0)
-                if (itemType == 0) then
-                    betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE         --check item in PillSlot
-                    itemType = playerEntity:GetActiveItem(ActiveSlot.SLOT_POCKET)
-                    if (itemType == 0) or (playerEntity:NeedsCharge(ActiveSlot.SLOT_POCKET)) then
-                        itemType = 0
-                    end
-                else
-                    if itemPool:IsPillIdentified(itemType) then
-                        itemType = itemPool:GetPillEffect(itemType, playerEntity)
-                    else
-                        itemType = 0
-                    end
-                end
-            end
-            itemTypeAlt = (playerEntity:NeedsCharge() and 0) or playerEntity:GetActiveItem()        --if item is not fully charged => itemTypeAlt = 0
-            -- Check if card or pill is a BetterVoiding item or if a ActiveItem exists and is fully charged
-            betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemType]
-            ::checkForBetterVoidingItem::
-            if itemType ~= 0 then
-                for i=1, betterVoidingItemTable.COUNT do
-                    if betterVoidingItemTable.TYPE[i] == itemType then
-                        betterVoidingItemIndex = i
-                        goto ignoreActiveItem
-                    end
-                end
-            end
-            if (betterVoidingItemIndex == -1) and (itemTypeAlt == 0) then
-                goto skipThisPlayer
-            end
-            -- Check if ActiveItem is a BetterVoiding item
-            betterVoidingItemTable = betterVoidingItemTables[BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE]
-            itemType = itemTypeAlt
-            itemTypeAlt = 0
-            goto checkForBetterVoidingItem
-            -- PreVoidingAnimation
-            ::ignoreActiveItem::
-            allVoidablePickups = BetterVoiding.selectPickups(playerEntity, betterVoidingItemTable.V_FLAGS[betterVoidingItemIndex]
-                , betterVoidingItemTable.PC_FLAGS[betterVoidingItemIndex])[1]
-
-            --[[ Alternate PreVoidingAnimaiton behaviour
-            local newPickupExists = false
-            for pickup, _ in pairs(allVoidablePickups) do
-                if preVoidingAnmSprites[GetPtrHash(pickup)] == nil then
-                    newPickupExists = true
-                end
-            end
-            if newPickupExists then
-                for _, sprite in pairs(preVoidingAnmSprites) do
-                    --sprite:Reset()
-                end
-                preVoidingAnmSprites = {}       --reset keyTable preVoidingAnmSprites
-                for pickup, _ in pairs(allVoidablePickups) do
-                    spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[betterVoidingItemIndex], pickup)
-                end
-            else--]]
-
-                -- Check if all PreVoidingAnimations are finished
-                for _, sprite in pairs(preVoidingAnmSprites) do
-                    if sprite:IsPlaying("Mark1.1") then
-                        return
-                    end
-                end
-                -- Start for every voidable pickup a new PreVoidingAnimation
-                for pickup, _ in pairs(allVoidablePickups) do
-                    spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[betterVoidingItemIndex], pickup)
-                end
-            --end
+    -- Check if all PreVoidingAnimations are finished
+    for _, sprite in pairs(preVoidingAnmSprites) do
+        if sprite:IsPlaying("Mark1.1") then
             return
         end
+    end
+
+    -- The PreVoidingAnimation is calculated based an the first player with an fully charged BetterVoiding item in an active slot
+    for playerIndex = 0, (game:GetNumPlayers() - 1) do   --for each player
+        playerEntity = Isaac.GetPlayer(playerIndex)
+        -- Check if the playerEntity holdes an BetterVoiding item in an active slot (ORDER: Card, Pill, PocketActiveItem, ActiveItem)
+        betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
+        itemType = playerEntity:GetCard(0)
+        if (itemType == 0) then
+            betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_PILL
+            itemType = playerEntity:GetPill(0)
+            if (itemType == 0) then
+                betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE         --check item in PillSlot
+                itemType = playerEntity:GetActiveItem(ActiveSlot.SLOT_POCKET)
+                if (itemType == 0) or (playerEntity:NeedsCharge(ActiveSlot.SLOT_POCKET)) then
+                    itemType = 0
+                end
+            else
+                if itemPool:IsPillIdentified(itemType) then
+                    itemType = itemPool:GetPillEffect(itemType, playerEntity)
+                else
+                    itemType = 0
+                end
+            end
+        end
+        itemTypeAlt = (playerEntity:NeedsCharge() and 0) or playerEntity:GetActiveItem()        --if item is not fully charged => itemTypeAlt = 0
+        -- Check if card or pill is a BetterVoiding item or if a ActiveItem exists and is fully charged
+        betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemType]
+        ::checkForBetterVoidingItem::
+        if (itemType ~= 0) then
+            for i = 1, betterVoidingItemTable.COUNT do
+                if betterVoidingItemTable.TYPE[i] == itemType then
+                    betterVoidingItemIndex = i
+                end
+            end
+        end
+        if (betterVoidingItemIndex == -1) then
+            if (itemTypeAlt == 0) then
+                goto skipThisPlayer
+            else
+                -- Check if ActiveItem is a BetterVoiding item
+                betterVoidingItemTable = betterVoidingItemTables[BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE]
+                itemType = itemTypeAlt
+                itemTypeAlt = 0
+                goto checkForBetterVoidingItem
+            end
+        else
+            -- PreVoidingAnimation
+            allVoidablePickups = BetterVoiding.selectPickups(playerEntity, betterVoidingItemTable.V_FLAGS[betterVoidingItemIndex]
+                , betterVoidingItemTable.PC_FLAGS[betterVoidingItemIndex])[1]
+            -- Start for every voidable pickup a new PreVoidingAnimation
+            for pickup, _ in pairs(allVoidablePickups) do
+                spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[betterVoidingItemIndex], pickup)
+            end
+            return
+        end
+
         ::skipThisPlayer::
     end
 end

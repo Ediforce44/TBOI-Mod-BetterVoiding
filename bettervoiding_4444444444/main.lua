@@ -80,7 +80,13 @@ local voidingPills = {
 }
 local betterVoidingItemTables = {voidingColls, voidingCards, voidingPills}
 -------------------------------------------------------------------------------------------------------------------------------------------
-
+--[[ For debug purpose only
+local debugText = ""
+local function debug()
+    Isaac.RenderText(debugText, 60, 60, 0, 1, 0, 1)
+end
+modBV:AddCallback(ModCallbacks.MC_POST_RENDER, debug)
+--]]
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Spawns a new pickup in the shop on the position of prePickup. Is used to manage GreedShops and for the Restock collectible
 ----- @Return: New pickup
@@ -361,6 +367,7 @@ function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
     clonedPickup = Isaac.Spawn(EntityType.ENTITY_PICKUP, pickup.Variant, pickup.SubType
         , game:GetRoom():FindFreePickupSpawnPosition(clonePosition), Vector(0,0), nil):ToPickup()
     clonedPickup:AddEntityFlags(pickup:GetEntityFlags())
+    clonedPickup:AddEntityFlags(EntityFlag.FLAG_APPEAR)
     clonedPickup:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE)
     if not cloneAnimation then
         clonedPickup:ClearEntityFlags(EntityFlag.FLAG_APPEAR)
@@ -707,7 +714,7 @@ local function betterVoidingCards(_, cardType, playerEntity)
 end
 
 -- Function for already existing voiding-pills and their ModCallback to turn them into BetterVoiding items
-local function betterVoidingPills(_, pillType, playerEntity)
+local function betterVoidingPills(_, pillEffect, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
     local playerData = playerEntity:GetData()
 
@@ -715,8 +722,8 @@ local function betterVoidingPills(_, pillType, playerEntity)
         playerData['mimicedPill'] = nil
     else
         playerData['mimicedPill'] = true
-        BetterVoiding.betterVoiding((pillType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_CARD), playerEntity)
-        playerEntity:UsePill(pillType)
+        BetterVoiding.betterVoiding((pillEffect << 3 | BetterVoiding.BetterVoidingItemType.TYPE_PILL), playerEntity)
+        playerEntity:UsePill(pillEffect, 0)
     end
 
     return nil
@@ -727,7 +734,8 @@ end
 --- BetterVoiding item. The new BetterVoiding item get registered with flagsV, flagsPC and preVoidingColor (default = grey).
 -- If generateModCallback is true, a ModCallback is automatically created for the BetterVoiding item,
 --- otherwise you have to implement the function betterVoiding() in your own ModCallback for the item.
--- If betterVoidingItemType is CARD or PILL, the item will be used first then apply BetterVoiding functions and then used a second time.
+-- If betterVoidingItemType is CARD or PILL, the automatically created ModCallback will use the item first then apply 
+--- BetterVoiding functions and then used a second time.
 ----- @Return: ID for this BetterVoiding item
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemType, generateModCallback, flagsV, flagsPC, preVoidingColor)
@@ -765,9 +773,8 @@ function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemT
             modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, itemType)
         elseif betterVoidingItemType == BetterVoiding.BetterVoidingItemType.TYPE_CARD then
             modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, itemType)
-        --[[ Work in Progress
         elseif betterVoidingItemType == BetterVoiding.BetterVoidingItemType.TYPE_PILL then
-            modBV:AddCallback(ModCallbacks.MC_USE_PILL, betterVoidingPills, itemType)--]]
+            modBV:AddCallback(ModCallbacks.MC_USE_PILL, betterVoidingPills, itemType)
         end
     end
 

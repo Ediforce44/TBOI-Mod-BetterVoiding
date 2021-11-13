@@ -25,7 +25,7 @@ local preVoidingAnmEntitys = {}
 local preVoidingAnmSprites = {}
 
 -- To access BetterVoiding functions from outside this mod
-BetterVoiding = {version = "1.0"}
+BetterVoiding = {version = "1.1"}
 -- Flags to determine how the voiding of an BetterVoiding item works
 BetterVoiding.VoidingFlags = {
     V_ALL_FREE_PICKUPS = 1<<0,              --All free Pickups

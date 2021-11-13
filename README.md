@@ -70,15 +70,15 @@ If you have already created a voiding item mod or you want simply creat a voidin
     local exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, true, flagsV, flagsPC, preVoidingColor)
 
     local function voiding()
-        Get all free collectibles in the room and
-        Do what your voiding item does
+        --Get all free collectibles in the room and
+        --Do what your voiding item does
     end
 
     mod:AddCallback(ModCallbacks.MC_USE_ITEM, voiding, exampleItemType)
     ```
 
      - And that's it. The only important thing is that you call the `betterVoidingItemConstructor()`, which pays the pickups and makes them free
-        > But maybe you realise that you can't do complex things with this. Like voiding only the nearest heart deal. Why? Because you don't know how to get it in your *voiding()* function. Or you want to do something with alternate item choices (same OptionsPickupIndex). But that is possible with the next **Example[2]**, if you use `betterVoiding()`.
+        > But maybe you realise that you can't do complex things with this. Like voiding **ONLY** the nearest heart deal. Why? Because you can't reference the heart deal item in your *voiding()* function. Or you want to do something with alternate item choices (same OptionsPickupIndex). But that is possible with the next **Example[2]**, if you use `betterVoiding()`.
 
 - **Example[2]** Add a Better Voiding item, but manage the voiding manually. The Better Voiding item is a card and voids the nearest consumable to isaac, which costs coins:
 
@@ -93,7 +93,7 @@ If you have already created a voiding item mod or you want simply creat a voidin
     local function voiding()
         local consumablesForVoiding = BetterVoiding.betterVoiding(exampleBVIID)
         for cons, dist in pairs(consumablesForVoiding)
-            Do what your voiding item does
+            --Do what your voiding item does
         end
     end
 

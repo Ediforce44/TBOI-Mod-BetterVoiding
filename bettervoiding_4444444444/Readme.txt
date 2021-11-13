@@ -122,8 +122,8 @@ So also look at example [2].
     mod:AddCallback(ModCallbacks.MC_USE_ITEM, voiding, exampleItemType)
 
     - And that's it. The only important thing is that you call the betterVoidingItemConstructor(), which pays the pickups and makes them free
-    > But maybe you realise that you can't do complex things with this. Like voiding only the nearest heart deal. Why? Because you don't know
-        how to get it in your voiding() function. 
+    > But maybe you realise that you can't do complex things with this. Like voiding only the nearest heart deal. Why? Because you can't 
+        reference the heart deal item in your *voiding()* function.
         Or you want to do something with alternate item choices (same OptionsPickupIndex). But that is possible with the next Example[2],
         if you use betterVoiding().
 

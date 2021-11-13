@@ -1,15 +1,21 @@
- Better Voiding API and Mod
+[h1] Better Voiding API and Mod [/h1]
 
-[h1] Better Voiding Mod [/h1]
+[h2] Better Voiding Mod [/h2]
 This mod is more like an esthetic Feature, than a new mechanic.
 It turns every voiding item into a Better Voiding item. Better Voiding change the way you void items. Existing items can still void Collectibles, which the player is holding over its head and they do a lot more.
-They also pay the nearest payable item to the player and then void them. There is also a Pre Voiding Animation added for each Better Voiding item. If you hold a Better Voiding item in an active slot and if it is fully charged, a Pre Voiding Animations are spawned.
+They also pay the nearest payable item to the player and then void it. There is also a Pre Voiding Animation added for each Better Voiding item. If you hold a Better Voiding item in an active slot and if it is fully charged, Pre Voiding Animations appear.
 Pre Voiding Animations are spawned beneath each item, which will be voided if you use the Better Voiding item. So you see, it's very hard to mess it up and die, because you accidentally void a heart deal.
 
-[h1] Better Voiding API [/h1]
+[h2] Better Voiding API [/h2]
 The main point of this mod is the API, which it offers to all other mods. It allows you to do a lot with pickups and simply create new Better Voiding items.
-If you have already wrote a mod which adds voiding items (Collectibles, Cards or Pills) and want to turn them into Better Voiding items, it takes only 1 to 2 lines of code extra to do so. The same goes for modders, who want specifically add Better Voiding items.
+If you have already wrote a mod, which adds voiding items (Collectibles, Cards or Pills) and want to turn them into Better Voiding items, it takes only 1 to 2 lines of code extra to do so. The same goes for modders, who want specifically add Better Voiding items.
 But this mod isn't only for voiding items. It provides a API for managing all types of pickups and in this version the main focus is the distance between entities and pickups.
 If you want to start implementing the Better Voiding API, it's good to start by reading the Readme.txt in the mod folder or better take a look at my GitHub repository and read the REAME.md
 
-GitHub: https://github.com/Ediforce44/TBOI_Better-Voiding
+[url=https://github.com/Ediforce44/TBOI_Better-Voiding]Visit Better Voiding API and Mod on GitHub![/url]
+
+[h2] Bugs and TODOs [/h2]
+[list]
+ [*] Restock doesn't work correctly if you void an item and then buy one
+ [*] The "spectral" item from Flip disappears if you void the main item - [b]Standing Cirno Fumo[/b]
+[/list]

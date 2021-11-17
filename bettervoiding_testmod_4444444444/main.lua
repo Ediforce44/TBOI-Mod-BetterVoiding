@@ -762,7 +762,7 @@ local function betterVoidingTest()
     return true
 end
 
-betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, calculatePickupDistTest) local function setTitle() debugTexts[0] = "CalculatePickupDistTest" end
+--betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, calculatePickupDistTest) local function setTitle() debugTexts[0] = "CalculatePickupDistTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, getNearestPickupTest) local function setTitle() debugTexts[0] = "GetNearestPickupTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, isPickupPayableTest) local function setTitle() debugTexts[0] = "IsPickupPayableTest" end
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, getNearestPayablePickupTest) local function setTitle() debugTexts[0] = "GetNearestPayablePickupTest" end
@@ -771,6 +771,52 @@ betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, calculatePickupDis
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, managePickupIndicesTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "ManagePickupIndicesTest" end -- 5.100.294
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, payPickupTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "PayPickupTest" end -- 5.100.294
 --betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingItemConstructorTest, CollectibleType.COLLECTIBLE_BUTTER_BEAN) local function setTitle() debugTexts[0] = "BetterVoidingItemConstructorTest" end betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingTest, CollectibleType.COLLECTIBLE_BEAN)
+
+local function setTitle() debugTexts[0] = "ItemTest" end
+
+local function testItems()
+    ---[[
+    local entities = {}
+    for _,entity in pairs(Isaac.FindByType(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE)) do
+        table.insert(entities, entity:ToPickup())
+    end
+
+    for i, entity in pairs(entities) do
+        debugTexts[i] = tostring(entity.SubType)
+    end--]]
+end
+
+--betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, testItems)
+local testFlipActive = false
+
+local function testFlip()
+    Isaac.GetPlayer(0):UseActiveItem(Isaac.GetItemIdByName("Flip"), 1 | 1<<1 | 1<<2)
+    Isaac.GetPlayer(0):StopExtraAnimation()
+    local poofEffects = Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.POOF01)
+    for _, poofEffect in pairs(poofEffects) do
+        poofEffect:GetSprite():SetFrame(25)
+        poofEffect:Remove()
+    end
+    testFlipActive = true
+    return true
+end
+
+betterVoidingTestMod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, testFlip, CollectibleType.COLLECTIBLE_BUTTER_BEAN)
+
+local function postUpdate()
+    if testFlipActive then
+        Isaac.GetPlayer(0):UseActiveItem(Isaac.GetItemIdByName("Flip"), 1 | 1<<1 | 1<<2)
+        Isaac.GetPlayer(0):StopExtraAnimation()
+        local poofEffects = Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.POOF01)
+        for _, poofEffect in pairs(poofEffects) do
+            poofEffect:GetSprite():SetFrame(25)
+            poofEffect:Remove()
+        end
+        testFlipActive = false
+    end
+end
+
+betterVoidingTestMod:AddCallback(ModCallbacks.MC_POST_RENDER, postUpdate)
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function drawDebugText()

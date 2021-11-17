@@ -245,14 +245,12 @@ function BetterVoiding.calculatePickupDist(position, flagsPC)
     local pickupPrice = 0
 
     -- Filter room for pickups
-    for _,entity in pairs(Isaac.GetRoomEntities()) do
-        if (entity.Type == EntityType.ENTITY_PICKUP) then
-            pickup = entity:ToPickup()
-            pickupPrice = pickup.Price
-            if pickupPrice > 0 then pickupPrice = 1 end     --replace price for shop pickups (For Look-Up-Table)
-            if (flagsLUT[pickupPrice] and flagsLUT[pickup.Variant]) and (pickup.SubType ~= 0) then      --SupType ~= 0 important for collectible
-                pickupDists[pickup] = position:Distance(pickup.Position)
-            end
+    for _,entity in pairs(Isaac.FindByType(EntityType.ENTITY_PICKUP)) do
+        pickup = entity:ToPickup()
+        pickupPrice = pickup.Price
+        if pickupPrice > 0 then pickupPrice = 1 end     --replace price for shop pickups (For Look-Up-Table)
+        if (flagsLUT[pickupPrice] and flagsLUT[pickup.Variant]) and (pickup.SubType ~= 0) then      --SupType ~= 0 important for collectible
+            pickupDists[pickup] = position:Distance(pickup.Position)
         end
     end
 
@@ -615,13 +613,11 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
                 playerEntity:TakeDamage(2, DamageFlag.DAMAGE_NO_PENALTIES, EntityRef(pickup), 0)
             end
             -- Handle spike animation
-            local entityList = Isaac.GetRoomEntities()
-            for _,entity in pairs(entityList) do
-                if entity.Type == EntityType.ENTITY_EFFECT and entity.Variant == EffectVariant.SHOP_SPIKES then
-                    if entity.Position.X == pickup.Position.X and entity.Position.Y == pickup.Position.Y then
-                        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.SHOP_SPIKES, 1, entity.Position, Vector(0,0), nil)
-                        entity:Remove()
-                    end
+            local spikeEntityList = Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.SHOP_SPIKES)
+            for _, spikeEntity in pairs(spikeEntityList) do
+                if spikeEntity.Position.X == pickup.Position.X and spikeEntity.Position.Y == pickup.Position.Y then
+                    Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.SHOP_SPIKES, 1, spikeEntity.Position, Vector(0,0), nil)
+                    spikeEntity:Remove()
                 end
             end
         -- Price: Soul
@@ -914,6 +910,7 @@ local function spawnPreVoidingAnimation(color, parentItem)
     -- Spawn new one
     preVoidingEntity = Isaac.Spawn(EntityType.ENTITY_EFFECT
         , Isaac.GetEntityVariantByName("BV Item Marks"), 0, parentItem.Position, Vector(0,0), parentItem)
+    preVoidingEntity.DepthOffset = -1
     preVoidingAnmEntitys[GetPtrHash(parentItem)] = preVoidingEntity
 
     -- Configure sprite

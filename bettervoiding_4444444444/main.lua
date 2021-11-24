@@ -178,12 +178,47 @@ local function manageRestock(pickup, forVoiding)
     end
 end
 
+local function setPriceFlagsInLUT(flagsPC, lookUpTable)
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE ~= 0) then
+        lookUpTable[0] = true
+    end
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS ~= 0) then
+        lookUpTable[PickupPrice.PRICE_ONE_HEART] = true
+        lookUpTable[PickupPrice.PRICE_TWO_HEARTS] = true
+        lookUpTable[PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS] = true
+        lookUpTable[PickupPrice.PRICE_THREE_SOULHEARTS] = true
+        lookUpTable[PickupPrice.PRICE_SOUL] = true
+    end
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS ~= 0) then
+        lookUpTable[1] = true
+        lookUpTable[PickupPrice.PRICE_FREE] = true
+    end
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_SPIKES ~= 0) then
+        lookUpTable[PickupPrice.PRICE_SPIKES] = true
+    end
+end
+
+local function setTypeFlagsInLUT(flagsPC, lookUpTable)
+    lookUpTable[PickupVariant.PICKUP_COLLECTIBLE] = ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE) ~= 0)
+    lookUpTable[PickupVariant.PICKUP_TRINKET] =  ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_TRINKET) ~= 0)
+    lookUpTable[PickupVariant.PICKUP_TAROTCARD] = ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_CARD) ~= 0)
+    lookUpTable[PickupVariant.PICKUP_PILL] = ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_PILL) ~= 0)
+    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE ~= 0 ) then
+        lookUpTable[PickupVariant.PICKUP_HEART] = true
+        lookUpTable[PickupVariant.PICKUP_COIN] = true
+        lookUpTable[PickupVariant.PICKUP_KEY] = true
+        lookUpTable[PickupVariant.PICKUP_BOMB] = true
+        lookUpTable[PickupVariant.PICKUP_GRAB_BAG] = true
+        lookUpTable[PickupVariant.PICKUP_LIL_BATTERY] = true
+    end
+end
+
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Returns a LookUpTable for flagsPC
 ----- @Return: Lookup Table of (Keys: PickupPrices and Variants, Values: True if this price or variant is allowed, nil otherwise6)
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function getLookUpTableForPCFlags(flagsPC)
-    local flagsLUT = {}
+    local lookUpTable = {}
 
     -- Handle PickupCategoryFlags
     local offset = 10
@@ -195,39 +230,12 @@ local function getLookUpTableForPCFlags(flagsPC)
     if ((flagsPC >> offset) == 0) then
         flagsPC = flagsPC | ~(2^offset - 1)
     end
-    -- PriceFlags
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_FREE ~= 0) then
-        flagsLUT[0] = true
-    end
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS ~= 0) then
-        flagsLUT[PickupPrice.PRICE_ONE_HEART] = true
-        flagsLUT[PickupPrice.PRICE_TWO_HEARTS] = true
-        flagsLUT[PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS] = true
-        flagsLUT[PickupPrice.PRICE_THREE_SOULHEARTS] = true
-        flagsLUT[PickupPrice.PRICE_SOUL] = true
-    end
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS ~= 0) then
-        flagsLUT[1] = true
-        flagsLUT[PickupPrice.PRICE_FREE] = true
-    end
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_PRICE_SPIKES ~= 0) then
-        flagsLUT[PickupPrice.PRICE_SPIKES] = true
-    end
-    -- TypeFlags
-    flagsLUT[PickupVariant.PICKUP_COLLECTIBLE] = ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE) ~= 0)
-    flagsLUT[PickupVariant.PICKUP_TRINKET] =  ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_TRINKET) ~= 0)
-    flagsLUT[PickupVariant.PICKUP_TAROTCARD] = ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_CARD) ~= 0)
-    flagsLUT[PickupVariant.PICKUP_PILL] = ((flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_PILL) ~= 0)
-    if (flagsPC & BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE ~= 0 ) then
-        flagsLUT[PickupVariant.PICKUP_HEART] = true
-        flagsLUT[PickupVariant.PICKUP_COIN] = true
-        flagsLUT[PickupVariant.PICKUP_KEY] = true
-        flagsLUT[PickupVariant.PICKUP_BOMB] = true
-        flagsLUT[PickupVariant.PICKUP_GRAB_BAG] = true
-        flagsLUT[PickupVariant.PICKUP_LIL_BATTERY] = true
-    end
 
-    return flagsLUT
+    setPriceFlagsInLUT(flagsPC, lookUpTable)
+
+    setTypeFlagsInLUT(flagsPC, lookUpTable)
+
+    return lookUpTable
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -277,42 +285,35 @@ function BetterVoiding.isPickupPayable(pickup, sourceEntity)
     sourceEntity = sourceEntity or Isaac.GetPlayer(0)
 
     if (pickup:IsShopItem()) then
-        -- Pickup is always payable if sourceEntity is not one of the first 4 players
-        local sourceEntityIsPlayer = false
-        for i = 0, 3 do
+        for i = 0, (game:GetNumPlayers() - 1) do        --pickup is always payable if sourceEntity is not a player
             if GetPtrHash(sourceEntity) == GetPtrHash(Isaac.GetPlayer(i)) then
-                sourceEntityIsPlayer = true
-            end
-        end
+                local playerEntity = sourceEntity:ToPlayer()
+                local pickupPrice = pickup.Price
 
-        if sourceEntityIsPlayer then
-            local playerEntity = sourceEntity:ToPlayer()
-            local pickupPrice = pickup.Price
-
-            -- Check if playerEntity could pay for pickup
-            if pickupPrice == PickupPrice.PRICE_ONE_HEART then
-                if playerEntity:GetMaxHearts() < 2 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRICE_TWO_HEARTS then
-                if playerEntity:GetMaxHearts() < 2 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRICE_THREE_SOULHEARTS then
-                if playerEntity:GetSoulHearts() < 1 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
-                if playerEntity:GetMaxHearts() < 2 or playerEntity:GetSoulHearts() < 2 then
-                    return false
-                end
-            elseif pickupPrice == PickupPrice.PRICE_SOUL then
-                if not playerEntity:HasTrinket(TrinketType.TRINKET_YOUR_SOUL, false) then
-                    return false
-                end
-            elseif pickupPrice > 0 then
-                if (playerEntity:GetNumCoins() < pickupPrice) then
-                    return false
+                if pickupPrice == PickupPrice.PRICE_ONE_HEART then
+                    if playerEntity:GetMaxHearts() < 2 then
+                        return false
+                    end
+                elseif pickupPrice == PickupPrice.PRICE_TWO_HEARTS then
+                    if playerEntity:GetMaxHearts() < 2 then
+                        return false
+                    end
+                elseif pickupPrice == PickupPrice.PRICE_THREE_SOULHEARTS then
+                    if playerEntity:GetSoulHearts() < 1 then
+                        return false
+                    end
+                elseif pickupPrice == PickupPrice.PRICE_ONE_HEART_AND_TWO_SOULHEARTS then
+                    if playerEntity:GetMaxHearts() < 2 or playerEntity:GetSoulHearts() < 2 then
+                        return false
+                    end
+                elseif pickupPrice == PickupPrice.PRICE_SOUL then
+                    if not playerEntity:HasTrinket(TrinketType.TRINKET_YOUR_SOUL, false) then
+                        return false
+                    end
+                elseif pickupPrice > 0 then
+                    if (playerEntity:GetNumCoins() < pickupPrice) then
+                        return false
+                    end
                 end
             end
         end
@@ -384,6 +385,64 @@ function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
     return clonedPickup
 end
 
+local function determineLostPickups(selectedPickup, pickupsWithSameIndex, remainingPickups, lostPickups)
+    remainingPickups[selectedPickup] = nil
+    pickupsWithSameIndex[selectedPickup] = nil
+    for pickup, dist in pairs(pickupsWithSameIndex) do
+        if dist ~= nil then
+            lostPickups[pickup] = dist
+            remainingPickups[pickup] = nil
+        end
+    end
+end
+
+local function manageVFlags_NP_NPP(nearestPickup, remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
+    local pickupIndex = nearestPickup.OptionsPickupIndex
+
+    selectedPickups[nearestPickup] = pickupIndexTables[pickupIndex][nearestPickup]
+    remainingPickups[nearestPickup] = nil
+    pickupIndexTables[pickupIndex][nearestPickup] = nil
+    if pickupIndex ~= 0 then
+        determineLostPickups(nearestPickup, pickupIndexTables[pickupIndex], remainingPickups, lostPickups)
+    end
+    -- Update necessary tables
+    pickupIndexTables[pickupIndex] = TableEx.updateTable(pickupIndexTables[pickupIndex])
+    remainingPickups = TableEx.updateTable(remainingPickups)
+end
+
+local function manageVFlags_AFP(remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
+    local nearestPickup = nil
+    local nearestPickupDist = -1
+
+    for pickupIndex, pickupTable in pairs(pickupIndexTables) do
+        if pickupIndex == 0 then                              --select all pickups if their OptionsPickupIndex = 0
+            for pickup, dist in pairs(pickupTable) do
+                if pickup.Price == 0 then
+                    selectedPickups[pickup] = dist
+                    remainingPickups[pickup] = nil
+                    pickupTable[pickup] = nil
+                end
+            end
+            pickupIndexTables[pickupIndex] = TableEx.updateTable(pickupIndexTables[pickupIndex])
+            remainingPickups = TableEx.updateTable(remainingPickups)
+        else                                            --select nearestPickup with this index if OptionsPickupIndex ~= 0
+            nearestPickup = nil
+            nearestPickupDist = -1
+            for pickup, dist in pairs(pickupTable) do
+                if pickup.Price == 0 then
+                    if (nearestPickupDist == -1) or (dist < nearestPickupDist) then
+                        nearestPickup = pickup
+                        nearestPickupDist = dist
+                    end
+                end
+            end
+            if nearestPickup ~= nil then
+                manageVFlags_NP_NPP(nearestPickup, remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
+            end
+        end
+    end
+end
+
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Sorts all flagsPC matching pickups in a room based on flagsV, sourceEntity and position.
 -- selectedPickups are the selected pickups by flagsV and sourceEntity or position.
@@ -412,82 +471,25 @@ function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC, position)
         end
         pickupIndexTables[pickupIndex][pickup] = dist
     end
-    -- Handle VoidingFlags:
 
     --- V_NEAREST_PAYABLE_PICKUP and V_NEAREST_PICKUP
-    nearestPickup = nil
     if (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP) ~= 0 then
         nearestPickup = BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC, position)
     elseif (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_PICKUP) ~= 0 then
         nearestPickup = BetterVoiding.getNearestPickup(position, flagsPC)
     end
     if nearestPickup ~= nil then
-        -- Select nearestPickup
         pickupIndex = nearestPickup.OptionsPickupIndex
         for pickup, _ in pairs(pickupIndexTables[pickupIndex]) do
             if GetPtrHash(pickup) == GetPtrHash(nearestPickup) then
-                nearestPickup = pickup
-                selectedPickups[nearestPickup] = pickupIndexTables[pickupIndex][nearestPickup]
-                remainingPickups[nearestPickup] = nil
-                pickupIndexTables[pickupIndex][nearestPickup] = nil
-                goto DetermineLostPickups
+                manageVFlags_NP_NPP(pickup, remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
             end
         end
-        -- Determine lostPickups
-        ::DetermineLostPickups::
-        if pickupIndex ~= 0 then
-            for pickup, dist in pairs(pickupIndexTables[pickupIndex]) do
-                if dist ~= nil then
-                    lostPickups[pickup] = dist
-                    pickupIndexTables[pickupIndex][pickup] = nil
-                end
-                remainingPickups[pickup] = nil
-            end
-        end
-        -- Update necessary tables
-        pickupIndexTables[pickupIndex] = TableEx.updateTable(pickupIndexTables[pickupIndex])
-        remainingPickups = TableEx.updateTable(remainingPickups)
     end
 
     --- V_ALL_FREE_PICKUPS
     if (flagsV & BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS) ~= 0 then
-        for index, pickupTable in pairs(pickupIndexTables) do
-            if index == 0 then
-                -- Select all pickups if their OptionsPickupIndex = 0
-                for pickup, dist in pairs(pickupTable) do
-                    if pickup.Price == 0 then
-                        selectedPickups[pickup] = dist
-                        remainingPickups[pickup] = nil
-                    end
-                end
-            else
-                -- Select nearestPickup with this index
-                nearestPickup = nil
-                local nearestPickupDist = -1
-                for pickup, dist in pairs(pickupTable) do
-                    if pickup.Price == 0 then
-                        if (nearestPickupDist == -1) or (dist < nearestPickupDist) then
-                            nearestPickup = pickup
-                            nearestPickupDist = dist
-                        end
-                    end
-                end
-                -- Determine lostPickups
-                if nearestPickup ~= nil then
-                    selectedPickups[nearestPickup] = pickupTable[nearestPickup]
-                    remainingPickups[nearestPickup] = nil
-                    pickupTable[nearestPickup] = nil
-                    for pickup, dist in pairs(pickupTable) do
-                        if dist ~= nil then
-                            lostPickups[pickup] = dist
-                            remainingPickups[pickup] = nil
-                        end
-                    end
-                end
-            end
-            pickupIndexTables[index] = {}
-        end
-        remainingPickups = TableEx.updateTable(remainingPickups)
+        manageVFlags_AFP(remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
     end
 
     return {selectedPickups, lostPickups, remainingPickups}
@@ -524,7 +526,7 @@ function BetterVoiding.managePickupIndices(refPickups)
         pickupTable = pickupIndexTables[pickupIndex]
         for pickup, _ in pairs(pickupTable) do
             if (GetPtrHash(pickup) == GetPtrHash(refPickups[i])) and (pickupTable[pickup] ~= nil) then
-                -- Take the refPickup and set its index to 0
+                -- Select the refPickup and set its index to 0
                 refPickups[i].OptionsPickupIndex = 0
                 table.insert(selectedPickups, refPickups[i])
             elseif pickup.OptionsPickupIndex ~= 0 then
@@ -537,6 +539,19 @@ function BetterVoiding.managePickupIndices(refPickups)
     end
 
     return selectedPickups
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Removes other collectibles, which have soulheart or spike prices in this room
+-------------------------------------------------------------------------------------------------------------------------------------------
+local function manageHeartDealsWithTheLost(takenPickup)
+    for p, _ in  pairs(BetterVoiding.calculatePickupDist(nil, STD_FLAGS_PC)) do
+        if (p.Price == PickupPrice.PRICE_THREE_SOULHEARTS or p.Price == PickupPrice.PRICE_SPIKES) then
+            p.OptionsPickupIndex = 100
+        end
+    end
+    takenPickup.OptionsPickupIndex = 100
+    return BetterVoiding.managePickupIndices({takenPickup})[1]
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -643,34 +658,25 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
         end
 
         ::payed::
-        -- Manages interaction with collectible 'Restock'
+
         --pickup = manageRestock(pickup, forVoiding) --doesn't work as intended
 
-        -- Manages OptionsPickupIndex of the pickup
         pickup = BetterVoiding.managePickupIndices({pickup})[1]
-        -- Manages pickups for TheLost-like characters
+
         if srcEntityIsLostlike then         --watch out: triggers everytime a lost-like character is paying a pickup
-            -- Removes other collectibles which have soulheart or spike prices in this room
-            for p, _ in  pairs(BetterVoiding.calculatePickupDist(nil, STD_FLAGS_PC)) do
-                if (p.Price == PickupPrice.PRICE_THREE_SOULHEARTS or p.Price == PickupPrice.PRICE_SPIKES) then
-                    p.OptionsPickupIndex = 100
-                end
-            end
-            pickup.OptionsPickupIndex = 100
-            pickup = BetterVoiding.managePickupIndices({pickup})[1]
+            pickup = manageHeartDealsWithTheLost(pickup)
         end
-        -- Manages shop restocks in Greedmode
+
         if game:IsGreedMode() then
             if ((game:GetRoom():GetType() == RoomType.ROOM_SHOP) and (pickup.Price ~= 0)) then
                 pickup = manageGreedShop(pickup, forVoiding)
             end
         end
-        -- Remove AngleDeals if a DevilDeal was payed
+
         if game:GetRoom():GetType() == RoomType.ROOM_DEVIL then
-            game:AddDevilRoomDeal()
+            game:AddDevilRoomDeal()                             --removes AngleDeals
         end
 
-        -- Make pickup free
         pickup.Price = 0
     end
 
@@ -922,18 +928,43 @@ local function spawnPreVoidingAnimation(color, parentItem)
     preVoidingAnmSprites[GetPtrHash(parentItem)] = preVoidingSprite
 end
 
+local function checkPlayerForBetterVoidingItem(playerEntity)
+    local betterVoidingItemType = -1
+    local itemType = 0
+    local itemTypeAlt = 0 --represents itemType of ActiveItem and is used if the CardSlot doesn't contain a BetterVoiding item
+
+    -- Check if the playerEntity holdes an BetterVoiding item in an active slot (ORDER: Card, Pill, PocketActiveItem, ActiveItem)
+    betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
+    itemType = playerEntity:GetCard(0)
+    if (itemType == 0) then
+        betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_PILL
+        itemType = playerEntity:GetPill(0)
+        if (itemType == 0) then
+            betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE         --check item in PillSlot
+            itemType = playerEntity:GetActiveItem(ActiveSlot.SLOT_POCKET)
+            if (itemType == 0) or (playerEntity:NeedsCharge(ActiveSlot.SLOT_POCKET)) then
+                itemType = 0
+            end
+        else
+            if itemPool:IsPillIdentified(itemType) then
+                itemType = itemPool:GetPillEffect(itemType, playerEntity)
+            else
+                itemType = 0
+            end
+        end
+    end
+    itemTypeAlt = (playerEntity:NeedsCharge() and 0) or playerEntity:GetActiveItem()    --if item is not fully charged => itemTypeAlt = 0
+    return {betterVoidingItemType, itemType, itemTypeAlt}
+end
+
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- If the player holdes a BetterVoiding item in an active slot and if it is fully charged, a PreVoidingAnimation is spawn for each pickup,
 --- which the BetterVoiding item will void. ORDER: PillSlot > ActiveSlot
 -- The PreVoidingAnimations are spawned synchronously, by waiting for all PreVoidingAnimations to end before starting them again.
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function preVoidingAnimation()
-    local betterVoidingItemType = -1
-    local itemType = 0
-    local itemTypeAlt = 0       --represents itemType of ActiveItem and is used if the CardSlot doesn't contain a BetterVoiding item
     local betterVoidingItemTable = nil
     local betterVoidingItemIndex = -1
-    local playerEntity = nil
     local allVoidablePickups = {}
 
     -- Check if all PreVoidingAnimations are finished
@@ -945,46 +976,26 @@ local function preVoidingAnimation()
 
     -- The PreVoidingAnimation is calculated based an the first player with an fully charged BetterVoiding item in an active slot
     for playerIndex = 0, (game:GetNumPlayers() - 1) do   --for each player
-        playerEntity = Isaac.GetPlayer(playerIndex)
-        -- Check if the playerEntity holdes an BetterVoiding item in an active slot (ORDER: Card, Pill, PocketActiveItem, ActiveItem)
-        betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
-        itemType = playerEntity:GetCard(0)
-        if (itemType == 0) then
-            betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_PILL
-            itemType = playerEntity:GetPill(0)
-            if (itemType == 0) then
-                betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE         --check item in PillSlot
-                itemType = playerEntity:GetActiveItem(ActiveSlot.SLOT_POCKET)
-                if (itemType == 0) or (playerEntity:NeedsCharge(ActiveSlot.SLOT_POCKET)) then
-                    itemType = 0
-                end
-            else
-                if itemPool:IsPillIdentified(itemType) then
-                    itemType = itemPool:GetPillEffect(itemType, playerEntity)
-                else
-                    itemType = 0
-                end
-            end
-        end
-        itemTypeAlt = (playerEntity:NeedsCharge() and 0) or playerEntity:GetActiveItem()        --if item is not fully charged => itemTypeAlt = 0
-        -- Check if card or pill is a BetterVoiding item or if a ActiveItem exists and is fully charged
-        betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemType]
+        local playerEntity = Isaac.GetPlayer(playerIndex)
+        local itemTypes = checkPlayerForBetterVoidingItem(playerEntity)
+
+        betterVoidingItemTable = betterVoidingItemTables[itemTypes[1]]
         ::checkForBetterVoidingItem::
-        if (itemType ~= 0) then
+        if (itemTypes[2] ~= 0) then
             for i = 1, betterVoidingItemTable.COUNT do
-                if betterVoidingItemTable.TYPE[i] == itemType then
+                if betterVoidingItemTable.TYPE[i] == itemTypes[2] then
                     betterVoidingItemIndex = i
                 end
             end
         end
         if (betterVoidingItemIndex == -1) then
-            if (itemTypeAlt == 0) then
+            if (itemTypes[3] == 0) then
                 goto skipThisPlayer
             else
                 -- Check if ActiveItem is a BetterVoiding item
                 betterVoidingItemTable = betterVoidingItemTables[BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE]
-                itemType = itemTypeAlt
-                itemTypeAlt = 0
+                itemTypes[2] = itemTypes[3]
+                itemTypes[3] = 0
                 goto checkForBetterVoidingItem
             end
         else

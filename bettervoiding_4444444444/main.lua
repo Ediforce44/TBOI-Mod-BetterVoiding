@@ -392,6 +392,7 @@ local function determineLostPickups(selectedPickup, pickupsWithSameIndex, remain
         if dist ~= nil then
             lostPickups[pickup] = dist
             remainingPickups[pickup] = nil
+            pickupsWithSameIndex[pickup] = nil
         end
     end
 end

@@ -80,9 +80,10 @@ local voidingPills = {
 }
 local betterVoidingItemTables = {voidingColls, voidingCards, voidingPills}
 -------------------------------------------------------------------------------------------------------------------------------------------
---[[ For debug purpose only
+---[[ For debug purpose only
 local debugText = ""
 local function debug()
+    debugText = tostring(Isaac.GetPlayer(0):GetHeartLimit())
     Isaac.RenderText(debugText, 60, 60, 0, 1, 0, 1)
 end
 modBV:AddCallback(ModCallbacks.MC_POST_RENDER, debug)
@@ -93,21 +94,8 @@ modBV:AddCallback(ModCallbacks.MC_POST_RENDER, debug)
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function restockShopPickup(prePickup)
     local newPickup = nil
-    local pickupType = nil
 
-    -- Determine type of the new pickup
-    if prePickup.Variant == PickupVariant.PICKUP_COLLECTIBLE then
-        pickupType =
-            itemPool:GetCollectible(itemPool:GetPoolForRoom(game:GetRoom():GetType(), seeds:GetNextSeed()), true, seeds:GetStartSeed())
-    elseif prePickup.Variant == PickupVariant.PICKUP_TAROTCARD then
-        pickupType = itemPool:GetCard(seeds:GetNextSeed(), true, true, false)
-    elseif prePickup.Variant == PickupVariant.PICKUP_PILL then
-        pickupType = itemPool:GetPill(seeds:GetNextSeed())
-    else
-        pickupType = prePickup.SubType
-    end
-    -- Spawn new pickup without animation
-    newPickup = Isaac.Spawn(prePickup.Type, prePickup.Variant, pickupType, prePickup.Position, Vector(0,0), nil):ToPickup()
+    newPickup = game:Spawn(prePickup.Type, prePickup.Variant, prePickup.Position, Vector(0,0), nil, 0, seeds:GetNextSeed()):ToPickup()
     newPickup:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE | EntityFlag.FLAG_APPEAR)      --disable spawn animation and damocles effect
     newPickup.ShopItemId = prePickup.ShopItemId     --set new pickup on the same shopposition
 
@@ -385,9 +373,9 @@ function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
     return clonedPickup
 end
 
-local function determineLostPickups(selectedPickup, pickupsWithSameIndex, remainingPickups, lostPickups)
-    remainingPickups[selectedPickup] = nil
-    pickupsWithSameIndex[selectedPickup] = nil
+local function refreshLostPickups(takenPickup, pickupsWithSameIndex, remainingPickups, lostPickups)
+    remainingPickups[takenPickup] = nil
+    pickupsWithSameIndex[takenPickup] = nil
     for pickup, dist in pairs(pickupsWithSameIndex) do
         if dist ~= nil then
             lostPickups[pickup] = dist
@@ -397,21 +385,52 @@ local function determineLostPickups(selectedPickup, pickupsWithSameIndex, remain
     end
 end
 
-local function manageVFlags_NP_NPP(nearestPickup, remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
-    local pickupIndex = nearestPickup.OptionsPickupIndex
+local function refreshPickupTables(takenPickup, pickupTables, pickupIndexTables)
+    if takenPickup == nil then return end
 
-    selectedPickups[nearestPickup] = pickupIndexTables[pickupIndex][nearestPickup]
-    remainingPickups[nearestPickup] = nil
-    pickupIndexTables[pickupIndex][nearestPickup] = nil
+    local pickupIndex = takenPickup.OptionsPickupIndex
+
+    pickupTables[1][takenPickup] = pickupIndexTables[pickupIndex][takenPickup]
+    pickupTables[3][takenPickup] = nil
+    pickupIndexTables[pickupIndex][takenPickup] = nil
     if pickupIndex ~= 0 then
-        determineLostPickups(nearestPickup, pickupIndexTables[pickupIndex], remainingPickups, lostPickups)
+        refreshLostPickups(takenPickup, pickupIndexTables[pickupIndex], pickupTables[3], pickupTables[2])
     end
     -- Update necessary tables
     pickupIndexTables[pickupIndex] = TableEx.updateTable(pickupIndexTables[pickupIndex])
-    remainingPickups = TableEx.updateTable(remainingPickups)
+    pickupTables[3] = TableEx.updateTable(pickupTables[3])
 end
 
-local function manageVFlags_AFP(remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
+local function findEntityInTable(entityRef, entityTable)
+    if entityRef == nil then
+        return nil
+    end
+
+    for entity, _ in pairs(entityTable) do
+        if GetPtrHash(entity) == GetPtrHash(entityRef) then
+            return entity
+        end
+    end
+    return nil
+end
+
+local function manageVFlags_NPP(pickupTables, pickupIndexTables, sourceEntity, position, flagsPC)
+    local nearestPickup = BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC, position)
+    if nearestPickup ~= nil then
+        nearestPickup = findEntityInTable(nearestPickup, pickupIndexTables[nearestPickup.OptionsPickupIndex])
+        refreshPickupTables(nearestPickup, pickupTables, pickupIndexTables)
+    end
+end
+
+local function manageVFlags_NP(pickupTables, pickupIndexTables, position, flagsPC)
+    local nearestPickup = BetterVoiding.getNearestPickup(position, flagsPC)
+    if nearestPickup ~= nil then
+        nearestPickup = findEntityInTable(nearestPickup, pickupIndexTables[nearestPickup.OptionsPickupIndex])
+        refreshPickupTables(nearestPickup, pickupTables, pickupIndexTables)
+    end
+end
+
+local function manageVFlags_AFP(pickupTables, pickupIndexTables)
     local nearestPickup = nil
     local nearestPickupDist = -1
 
@@ -419,13 +438,13 @@ local function manageVFlags_AFP(remainingPickups, selectedPickups, lostPickups, 
         if pickupIndex == 0 then                              --select all pickups if their OptionsPickupIndex = 0
             for pickup, dist in pairs(pickupTable) do
                 if pickup.Price == 0 then
-                    selectedPickups[pickup] = dist
-                    remainingPickups[pickup] = nil
+                    pickupTables[1][pickup] = dist
+                    pickupTables[3][pickup] = nil
                     pickupTable[pickup] = nil
                 end
             end
             pickupIndexTables[pickupIndex] = TableEx.updateTable(pickupIndexTables[pickupIndex])
-            remainingPickups = TableEx.updateTable(remainingPickups)
+            pickupTables[3] = TableEx.updateTable(pickupTables[3])
         else                                            --select nearestPickup with this index if OptionsPickupIndex ~= 0
             nearestPickup = nil
             nearestPickupDist = -1
@@ -438,10 +457,24 @@ local function manageVFlags_AFP(remainingPickups, selectedPickups, lostPickups, 
                 end
             end
             if nearestPickup ~= nil then
-                manageVFlags_NP_NPP(nearestPickup, remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
+                refreshPickupTables(nearestPickup, pickupTables, pickupIndexTables)
             end
         end
     end
+end
+
+local function groupPickupsByIndices(pickups)
+    local pickupIndex = 0
+    local pickupIndexTables = {}
+
+    for pickup, dist in pairs(pickups) do
+        pickupIndex = pickup.OptionsPickupIndex
+        if pickupIndexTables[pickupIndex] == nil then
+            pickupIndexTables[pickupIndex] = {}
+        end
+        pickupIndexTables[pickupIndex][pickup] = dist
+    end
+    return pickupIndexTables
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -457,43 +490,24 @@ function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC, position)
     flagsPC = flagsPC or BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS
     position = position or sourceEntity.Position
 
-    local pickupIndex = 0
     local nearestPickup = nil
-    local pickupIndexTables = {}
-    local selectedPickups = {}   --pickups which are voidable
-    local lostPickups = {}      --pickups which should be removed if the selectedPickups are taken
-    local remainingPickups = BetterVoiding.calculatePickupDist(position, flagsPC)   --pickups which doesn't belong to selectedPickups or lostPickups
-
-    -- Group remainingPickups by OptionsPickupIndex
-    for pickup, dist in pairs(remainingPickups) do
-        pickupIndex = pickup.OptionsPickupIndex
-        if pickupIndexTables[pickupIndex] == nil then
-            pickupIndexTables[pickupIndex] = {}
-        end
-        pickupIndexTables[pickupIndex][pickup] = dist
-    end
+    --[1] = pickups which are voidable, [2] = pickups which should be removed, [3] = pickups which doesn't belong to selectedPickups or lostPickups
+    local pickupTables = {{}, {}, BetterVoiding.calculatePickupDist(position, flagsPC)}
+    local pickupIndexTables = groupPickupsByIndices(pickupTables[3])               --remainingPickups grouped by their OptionsPickupIndex
 
     --- V_NEAREST_PAYABLE_PICKUP and V_NEAREST_PICKUP
     if (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP) ~= 0 then
-        nearestPickup = BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC, position)
+        manageVFlags_NPP(pickupTables, pickupIndexTables, sourceEntity, position, flagsPC)
     elseif (flagsV & BetterVoiding.VoidingFlags.V_NEAREST_PICKUP) ~= 0 then
-        nearestPickup = BetterVoiding.getNearestPickup(position, flagsPC)
-    end
-    if nearestPickup ~= nil then
-        pickupIndex = nearestPickup.OptionsPickupIndex
-        for pickup, _ in pairs(pickupIndexTables[pickupIndex]) do
-            if GetPtrHash(pickup) == GetPtrHash(nearestPickup) then
-                manageVFlags_NP_NPP(pickup, remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
-            end
-        end
+        manageVFlags_NP(pickupTables, pickupIndexTables, position, flagsPC)
     end
 
     --- V_ALL_FREE_PICKUPS
     if (flagsV & BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS) ~= 0 then
-        manageVFlags_AFP(remainingPickups, selectedPickups, lostPickups, pickupIndexTables)
+        manageVFlags_AFP(pickupTables, pickupIndexTables)
     end
 
-    return {selectedPickups, lostPickups, remainingPickups}
+    return pickupTables
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -697,7 +711,7 @@ end
 local function betterVoidingColls(_, collType, _, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
     BetterVoiding.betterVoiding((collType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE), playerEntity)
-    return nil
+    return true
 end
 
 -- Function for already existing voiding-cards/runes and their ModCallback to turn them into BetterVoiding items

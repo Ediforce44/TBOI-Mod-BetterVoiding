@@ -228,7 +228,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Returns a LookUpTable for flagsPC
------ @Return: Lookup Table of (Keys: PickupPrices and Variants, Values: True if this price or variant is allowed, nil otherwise6)
+----- @Return: Lookup Table of (Keys: PickupPrices and Variants, Values: True if this price or variant is allowed, nil otherwise)
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function getLookUpTableForPCFlags(flagsPC)
     local lookUpTable = {}
@@ -774,7 +774,7 @@ local function betterVoidingPills(_, pillEffect, playerEntity)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Needs to be called if BetterVoiding item is added to the game. The function needs the betterVoidingItemType and itemType of the
+-- Needs to be called if BetterVoiding item is added to the game. The function needs the betterVoidingItemType and itemSubType of the
 --- BetterVoiding item. The new BetterVoiding item get registered with flagsV, flagsPC and preVoidingColor (default = grey).
 -- If generateModCallback is true, a ModCallback is automatically created for the BetterVoiding item,
 --- otherwise you have to implement the function betterVoiding() in your own ModCallback for the item.
@@ -782,8 +782,8 @@ end
 --- BetterVoiding functions and then used a second time.
 ----- @Return: ID for this BetterVoiding item
 -------------------------------------------------------------------------------------------------------------------------------------------
-function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemType, generateModCallback, flagsV, flagsPC, preVoidingColor)
-    if (betterVoidingItemType == nil) or (itemType == nil) then return -1 end
+function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemSubType, generateModCallback, flagsV, flagsPC, preVoidingColor)
+    if (betterVoidingItemType == nil) or (itemSubType == nil) then return -1 end
     if generateModCallback == nil then
         generateModCallback = false
     end
@@ -799,14 +799,14 @@ function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemT
     end
     --[[ If overriding an already existing BetterVoiding item shouldn't be allowed
     for i=1, itemTable.COUNT do
-        if itemTable.TYPE[i] == itemType then
-            return -2   --BetterVoiding item with this itemType already exists
+        if itemTable.TYPE[i] == itemSubType then
+            return -2   --BetterVoiding item with this itemSubType already exists
         end
     end
     --]]
 
     -- Add a new BetterVoiding item to the corresponding itemTable
-    table.insert(itemTable.TYPE, itemType)
+    table.insert(itemTable.TYPE, itemSubType)
     table.insert(itemTable.COLOR, preVoidingColor)
     table.insert(itemTable.V_FLAGS, flagsV)
     table.insert(itemTable.PC_FLAGS, flagsPC)
@@ -814,15 +814,15 @@ function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemT
 
     if generateModCallback then
         if betterVoidingItemType == BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE then
-            modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, itemType)
+            modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, itemSubType)
         elseif betterVoidingItemType == BetterVoiding.BetterVoidingItemType.TYPE_CARD then
-            modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, itemType)
+            modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, itemSubType)
         elseif betterVoidingItemType == BetterVoiding.BetterVoidingItemType.TYPE_PILL then
-            modBV:AddCallback(ModCallbacks.MC_USE_PILL, betterVoidingPills, itemType)
+            modBV:AddCallback(ModCallbacks.MC_USE_PILL, betterVoidingPills, itemSubType)
         end
     end
 
-    return (itemType << 3 | betterVoidingItemType)    --ID for a BetterVoiding item
+    return (itemSubType << 3 | betterVoidingItemType)    --ID for a BetterVoiding item
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -835,14 +835,14 @@ function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
     sourceEntity = sourceEntity or Isaac.GetPlayer()
 
     local itemTable = betterVoidingItemTables[betterVoidingItemID & (2^3 - 1)]      --get BetterVoidingItemTable out of betterVoidingItemID
-    local itemType = betterVoidingItemID >> 3       --get the itemType out of betterVoidingItemID
+    local itemSubType = betterVoidingItemID >> 3       --get the itemSubType out of betterVoidingItemID
     local betterVoidingItemIndex = -1
     local allPickups = {}
     local voidablePickups = {}
 
     -- Get the index of the BetterVoiding item in itemTable
     for i=1, itemTable.COUNT do
-        if (itemTable.TYPE[i] == itemType) then
+        if (itemTable.TYPE[i] == itemSubType) then
             betterVoidingItemIndex = i
             goto skip
         end
@@ -945,6 +945,96 @@ modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_UPDATE, genesisFix)
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------------------------------------------------
+-- Returns the index in the betterVoidingItemTable from the BetterVoiding item with the betterVoidingItemType and itemSubType.
+----- @Return: Index of the BetterVoiding item, or -1 if BetterVoiding item doesn't exist
+-------------------------------------------------------------------------------------------------------------------------------------------
+local function getBetterVoidingItemIndex(betterVoidingItemType, itemSubType)
+    if itemSubType == 0 then return -1 end
+
+    local betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemType]
+
+    if betterVoidingItemTable ~= nil then
+        for i = 1, betterVoidingItemTables.COUNT do
+            if betterVoidingItemTable.TYPE[i] == itemSubType then
+                return i
+            end
+        end
+    end
+    return -1
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Checks if a BetterVoiding item with the betterVoidingItemType and itemSubType exists.
+----- @Return: True if BetterVoiding item exists, False otherwise
+-------------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding.isBetterVoidingItem(betterVoidingItemType, itemSubType)
+    if getBetterVoidingItemIndex(betterVoidingItemType, itemSubType) == -1 then
+        return false
+    end
+    return true
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Check if at least one PreVoidingAnimation is playing.
+----- @Return: True if a PreVoidingAnimation is playing, False otherwise
+-------------------------------------------------------------------------------------------------------------------------------------------
+local function isPreVoidingAnimationPlaying()
+    for _, sprite in pairs(preVoidingAnmSprites) do
+        if sprite:IsPlaying("Mark1.1") then
+            return true
+        end
+    end
+    return false
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Checks if the playerEntity holdes an BetterVoiding item in an active slot (ORDER: Card, Pill, PocketActiveItem, ActiveItem) and returns
+--- its meta data.
+-- It returns 'nil' if the playerEntity has no fully charged BetterVoiding item in one of his active slots.
+----- @Return: {The BetterVoiding item type, The index of the BetterVoiding item in the betterVoidingItemTable} or nil
+-------------------------------------------------------------------------------------------------------------------------------------------
+local function checkPlayerForBetterVoidingItem(playerEntity)
+    local betterVoidingItemType = -1
+    local itemSubType = 0
+    local betterVoidingItemIndex = -1
+
+    betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
+    itemSubType = playerEntity:GetCard(0)
+    if (itemSubType == 0) then
+        betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_PILL
+        itemSubType = playerEntity:GetPill(0)
+        if (itemSubType == 0) then
+            betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE         --check active item in PillSlot
+            itemSubType = playerEntity:GetActiveItem(ActiveSlot.SLOT_POCKET)
+            if playerEntity:NeedsCharge(ActiveSlot.SLOT_POCKET) then
+                itemSubType = 0
+            end
+        else
+            if itemPool:IsPillIdentified(itemSubType) then
+                itemSubType = itemPool:GetPillEffect(itemSubType, playerEntity)
+            else
+                itemSubType = 0
+            end
+        end
+    end
+    betterVoidingItemIndex = getBetterVoidingItemIndex(betterVoidingItemType, itemSubType)
+    if (betterVoidingItemIndex == -1) then
+        if not playerEntity:NeedsCharge(ActiveSlot.SLOT_PRIMARY) then
+            betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE
+            itemSubType = playerEntity:GetActiveItem()
+            betterVoidingItemIndex = getBetterVoidingItemIndex(betterVoidingItemType, itemSubType)
+            if (betterVoidingItemIndex == -1) then
+                return nil
+            end
+        else
+            return nil
+        end
+    end
+    return {betterVoidingItemType, betterVoidingItemIndex}
+end
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------
 -- Spawns and Play a PreVoidingAnimation at the same position of parentItem with color.
 -- The animationEntitys and sprites are added to the keyTables preVoidingAnmEntity and preVoidingAnmSprites with Key GetPtrHash(parentItem)
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -971,83 +1061,27 @@ local function spawnPreVoidingAnimation(color, parentItem)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- ???
--------------------------------------------------------------------------------------------------------------------------------------------
-local function checkPlayerForBetterVoidingItem(playerEntity)
-    local betterVoidingItemType = -1
-    local itemType = 0
-    local itemTypeAlt = 0 --represents itemType of ActiveItem and is used if the CardSlot doesn't contain a BetterVoiding item
-
-    -- Check if the playerEntity holdes an BetterVoiding item in an active slot (ORDER: Card, Pill, PocketActiveItem, ActiveItem)
-    betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
-    itemType = playerEntity:GetCard(0)
-    if (itemType == 0) then
-        betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_PILL
-        itemType = playerEntity:GetPill(0)
-        if (itemType == 0) then
-            betterVoidingItemType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE         --check item in PillSlot
-            itemType = playerEntity:GetActiveItem(ActiveSlot.SLOT_POCKET)
-            if (itemType == 0) or (playerEntity:NeedsCharge(ActiveSlot.SLOT_POCKET)) then
-                itemType = 0
-            end
-        else
-            if itemPool:IsPillIdentified(itemType) then
-                itemType = itemPool:GetPillEffect(itemType, playerEntity)
-            else
-                itemType = 0
-            end
-        end
-    end
-    itemTypeAlt = (playerEntity:NeedsCharge() and 0) or playerEntity:GetActiveItem()    --if item is not fully charged => itemTypeAlt = 0
-    return {betterVoidingItemType, itemType, itemTypeAlt}
-end
-
--------------------------------------------------------------------------------------------------------------------------------------------
 -- If the player holdes a BetterVoiding item in an active slot and if it is fully charged, a PreVoidingAnimation is spawn for each pickup,
 --- which the BetterVoiding item will void. ORDER: PillSlot > ActiveSlot
 -- The PreVoidingAnimations are spawned synchronously, by waiting for all PreVoidingAnimations to end before starting them again.
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function preVoidingAnimation()
-    local betterVoidingItemTable = nil
-    local betterVoidingItemIndex = -1
-    local allVoidablePickups = {}
-
-    -- Check if all PreVoidingAnimations are finished
-    for _, sprite in pairs(preVoidingAnmSprites) do
-        if sprite:IsPlaying("Mark1.1") then
-            return
-        end
+    if isPreVoidingAnimationPlaying() then
+        return
     end
-
-    -- The PreVoidingAnimation is calculated based an the first player with an fully charged BetterVoiding item in an active slot
+    --the PreVoidingAnimation is calculated based an the first player with an fully charged BetterVoiding item in an active slot
     for playerIndex = 0, (game:GetNumPlayers() - 1) do   --for each player
         local playerEntity = Isaac.GetPlayer(playerIndex)
-        local itemTypes = checkPlayerForBetterVoidingItem(playerEntity)
+        local betterVoidingItemMetaData = checkPlayerForBetterVoidingItem(playerEntity)
 
-        betterVoidingItemTable = betterVoidingItemTables[itemTypes[1]]
-        ::checkForBetterVoidingItem::
-        if (itemTypes[2] ~= 0) then
-            for i = 1, betterVoidingItemTable.COUNT do
-                if betterVoidingItemTable.TYPE[i] == itemTypes[2] then
-                    betterVoidingItemIndex = i
-                end
-            end
-        end
-        if (betterVoidingItemIndex == -1) then
-            if (itemTypes[3] == 0) then
-                goto skipThisPlayer
-            else
-                -- Check if ActiveItem is a BetterVoiding item
-                betterVoidingItemTable = betterVoidingItemTables[BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE]
-                itemTypes[2] = itemTypes[3]
-                itemTypes[3] = 0
-                goto checkForBetterVoidingItem
-            end
+        if betterVoidingItemMetaData == nil then
+            goto skipThisPlayer
         else
-            -- PreVoidingAnimation
-            allVoidablePickups = BetterVoiding.selectPickups(playerEntity, betterVoidingItemTable.V_FLAGS[betterVoidingItemIndex]
+            local betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemMetaData[1]]
+            local betterVoidingItemIndex = betterVoidingItemMetaData[2]
+            local allVoidablePickups = BetterVoiding.selectPickups(playerEntity, betterVoidingItemTable.V_FLAGS[betterVoidingItemIndex]
                 , betterVoidingItemTable.PC_FLAGS[betterVoidingItemIndex])[1]
-            -- Start for every voidable pickup a new PreVoidingAnimation
+
             for pickup, _ in pairs(allVoidablePickups) do
                 spawnPreVoidingAnimation(betterVoidingItemTable.COLOR[betterVoidingItemIndex], pickup)
             end

@@ -62,12 +62,18 @@ Now let's start talking about the Better Voiding API.
 If you have already created a voiding item mod or you want simply creat a voiding item, there is one easy way to turn it into a Better Voiding item. **But maybe it's not the best way. So also look at example [2].**
 - **Example[1]** Add a Better Voiding item, which voids the nearest heart deal to the player and all free collectibles:
     ```lua
-    local exampleItemType = Isaac.GetItemIdByName("Example Item")
-    local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE
-    local preVoidingColor = Color(0.5, 0.5, 1, 1, 0, 0, 0)
-    local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP | BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS
-    local flagsPC = BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE
-    local exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, true, flagsV, flagsPC, preVoidingColor)
+    local exampleBVIID
+    
+    local function init()
+        local exampleItemType = Isaac.GetItemIdByName("Example Item")
+        local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE
+        local preVoidingColor = Color(0.5, 0.5, 1, 1, 0, 0, 0)
+        local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP | BetterVoiding.VoidingFlags.V_ALL_FREE_PICKUPS
+        local flagsPC = BetterVoiding.PickupCategoryFlags.PC_PRICE_HEARTS | BetterVoiding.PickupCategoryFlags.PC_TYPE_COLLECTIBLE
+        exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, true, flagsV, flagsPC, preVoidingColor)
+    end
+    
+    mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, init)
 
     local function voiding()
         --Get all free collectibles in the room and
@@ -83,12 +89,18 @@ If you have already created a voiding item mod or you want simply creat a voidin
 - **Example[2]** Add a Better Voiding item, but manage the voiding manually. The Better Voiding item is a card and voids the nearest consumable to isaac, which costs coins:
 
     ```lua
-    local exampleItemType = Isaac.GetCardIdByName("Example Card")
-    local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
-    local preVoidingColor = Color(0.5, 0.5, 0, 1, 0, 0, 0)
-    local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP
-    local flagsPC = BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE
-    local exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, false, flagsV, flagsPC, preVoidingColor)
+    local exampleBVIID
+    
+    local function init()
+        local exampleItemType = Isaac.GetCardIdByName("Example Card")
+        local exampleBVIType = BetterVoiding.BetterVoidingItemType.TYPE_CARD
+        local preVoidingColor = Color(0.5, 0.5, 0, 1, 0, 0, 0)
+        local flagsV = BetterVoiding.VoidingFlags.V_NEAREST_PAYABLE_PICKUP
+        local flagsPC = BetterVoiding.PickupCategoryFlags.PC_PRICE_COINS | BetterVoiding.PickupCategoryFlags.PC_TYPE_CONSUMABLE
+        exampleBVIID = BetterVoiding.betterVoidingItemConstructor(exampleBVIType, exampleItemType, true, flagsV, flagsPC, preVoidingColor)
+    end
+    
+    mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, init)
 
     local function voiding()
         local consumablesForVoiding = BetterVoiding.betterVoiding(exampleBVIID)

@@ -954,7 +954,7 @@ local function getBetterVoidingItemIndex(betterVoidingItemType, itemSubType)
     local betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemType]
 
     if betterVoidingItemTable ~= nil then
-        for i = 1, betterVoidingItemTables.COUNT do
+        for i = 1, betterVoidingItemTable.COUNT do
             if betterVoidingItemTable.TYPE[i] == itemSubType then
                 return i
             end

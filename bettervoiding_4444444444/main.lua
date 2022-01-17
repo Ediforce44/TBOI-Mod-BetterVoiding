@@ -83,11 +83,32 @@ local betterVoidingItemTables = {voidingColls, voidingCards, voidingPills}
 -------------------------------------------------------------------------------------------------------------------------------------------
 --[[ For debug purpose only
 local debugText = ""
+local debugText2 = ""
+
 local function debug()
-    debugText = tostring(Isaac.GetPlayer(0):GetHeartLimit())
+    debugText = ""
+    local allEntities = Isaac.FindByType(EntityType.ENTITY_PICKUP)
+    for _, entity in pairs(allEntities) do
+        debugText = debugText .. tostring(entity:GetSprite():GetLayerCount()) .. ", "
+    end
+
     Isaac.RenderText(debugText, 60, 60, 0, 1, 0, 1)
+    Isaac.RenderText(debugText2, 60, 120, 0, 1, 0, 1)
 end
 modBV:AddCallback(ModCallbacks.MC_POST_RENDER, debug)
+
+
+local function test()
+    local allEntities = Isaac.FindByType(EntityType.ENTITY_PICKUP)
+    for _, entity in pairs(allEntities) do
+        --entity:GetSprite():SetFrame(0)
+        entity.SubType = 0
+        entity:GetSprite():ReplaceSpritesheet(1, "gfx/collectibles_NULL.png")
+        entity:GetSprite():ReplaceSpritesheet(4, "gfx/collectibles_NULL.png")
+        entity:GetSprite():LoadGraphics()
+    end
+end
+modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, test, CollectibleType.COLLECTIBLE_BUTTER_BEAN) -- 5.100.294
 --]]
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -373,7 +394,17 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Determins all pickups in the current room, which match flagsPC (default = PC_ALL_PICKUPS | PC_TYPE_COLLECTIBLE) and
+-- Modifies pedestalEntity to be treated and to look like an empty pedestal.
+-------------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding.clearPedestal(pedestalEntity)
+    pedestalEntity.SubType = 0
+    pedestalEntity:GetSprite():ReplaceSpritesheet(1, "gfx/items/collectibles/collectibles_NULL.png")
+    pedestalEntity:GetSprite():ReplaceSpritesheet(4, "gfx/items/collectibles/collectibles_NULL.png")
+    pedestalEntity:GetSprite():LoadGraphics()
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Determins all pickups in the current room, which match flagsPC (default = PC_ALL_PICKUPS) and
 --- their distance to position (default = Player_0.Position)
 ----- @Return: KeyTable of (Keys: Pickups, Values: Distance between the pickup and position)
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -735,15 +766,25 @@ end
 -- Global access
 -------------------------------------------------------------------------------------------------------------------------------------------
 
+-- Preparing all entities from an entityList for the build in voiding mechanic
+local function preparePickupsForBuildInVoiding(entityList)
+    for entity, _ in pairs(entityList) do
+        local duplicatedEntity = Isaac.Spawn(EntityType.ENTITY_PICKUP, entity.Variant, entity.SubType, entity.Position, Vector(0, 0), nil)
+        duplicatedEntity:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE)
+        duplicatedEntity:ClearEntityFlags(EntityFlag.FLAG_APPEAR)
+        BetterVoiding.clearPedestal(entity)
+    end
+end
+
 -- Function for already existing voiding-collectibles and their ModCallbacks to turn them into BetterVoiding items
-local function betterVoidingColls(_, collType, _, playerEntity)
+function modBV:betterVoidingColls(collType, _, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
-    BetterVoiding.betterVoiding((collType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE), playerEntity)
+    preparePickupsForBuildInVoiding(BetterVoiding.betterVoiding((collType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE), playerEntity))
     return nil
 end
 
 -- Function for already existing voiding-cards/runes and their ModCallback to turn them into BetterVoiding items
-local function betterVoidingCards(_, cardType, playerEntity)
+function modBV:betterVoidingCards(cardType, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
     local playerData = playerEntity:GetData()
 
@@ -751,7 +792,7 @@ local function betterVoidingCards(_, cardType, playerEntity)
         playerData['mimicedCard'] = nil
     else
         playerData['mimicedCard'] = true
-        BetterVoiding.betterVoiding((cardType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_CARD), playerEntity)
+        preparePickupsForBuildInVoiding(BetterVoiding.betterVoiding((cardType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_CARD), playerEntity))
         playerEntity:UseCard(cardType)
     end
 
@@ -759,7 +800,7 @@ local function betterVoidingCards(_, cardType, playerEntity)
 end
 
 -- Function for already existing voiding-pills and their ModCallback to turn them into BetterVoiding items
-local function betterVoidingPills(_, pillEffect, playerEntity)
+function modBV:betterVoidingPills(pillEffect, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
     local playerData = playerEntity:GetData()
 
@@ -767,7 +808,7 @@ local function betterVoidingPills(_, pillEffect, playerEntity)
         playerData['mimicedPill'] = nil
     else
         playerData['mimicedPill'] = true
-        BetterVoiding.betterVoiding((pillEffect << 3 | BetterVoiding.BetterVoidingItemType.TYPE_PILL), playerEntity)
+        preparePickupsForBuildInVoiding(BetterVoiding.betterVoiding((pillEffect << 3 | BetterVoiding.BetterVoidingItemType.TYPE_PILL), playerEntity))
         playerEntity:UsePill(pillEffect, 0)
     end
 
@@ -824,6 +865,36 @@ function BetterVoiding.betterVoidingItemConstructor(betterVoidingItemType, itemS
     end
 
     return (itemSubType << 3 | betterVoidingItemType)    --ID for a BetterVoiding item
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Returns the index in the betterVoidingItemTable from the BetterVoiding item with the betterVoidingItemType and itemSubType.
+----- @Return: Index of the BetterVoiding item, or -1 if BetterVoiding item doesn't exist
+-------------------------------------------------------------------------------------------------------------------------------------------
+local function getBetterVoidingItemIndex(betterVoidingItemType, itemSubType)
+    if itemSubType == 0 then return -1 end
+
+    local betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemType]
+
+    if betterVoidingItemTable ~= nil then
+        for i = 1, betterVoidingItemTable.COUNT do
+            if betterVoidingItemTable.TYPE[i] == itemSubType then
+                return i
+            end
+        end
+    end
+    return -1
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Checks if a BetterVoiding item with the betterVoidingItemType and itemSubType exists.
+----- @Return: True if BetterVoiding item exists, False otherwise
+-------------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding.isBetterVoidingItem(betterVoidingItemType, itemSubType)
+    if getBetterVoidingItemIndex(betterVoidingItemType, itemSubType) == -1 then
+        return false
+    end
+    return true
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -888,12 +959,16 @@ function BetterVoiding.betterVoidingRA(betterVoidingItemID, sourceEntity)
     if voidablePickups == nil then
         return nil
     end
-    -- Remove all voidable pickups and play POOF animation
+    -- Removes all voidable pickups, clear pedestals for voidable collectables and play POOF animation
     for pickup, _ in pairs(voidablePickups) do
         table.insert(voidedPickups.VARIANT, pickup.Variant)
         table.insert(voidedPickups.SUBTYPE, pickup.SubType)
         Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, pickup.Position, Vector(0,0), pickup)        --play animation
-        pickup:Remove()
+        if pickup.Variant == PickupVariant.PICKUP_COLLECTIBLE then
+            BetterVoiding.clearPedestal(pickup)
+        else
+            pickup:Remove()
+        end
     end
 
     return voidedPickups
@@ -904,9 +979,9 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------------------------------------------------
-modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, Isaac.GetItemIdByName("Void"))
-modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, betterVoidingColls, Isaac.GetItemIdByName("Abyss"))
-modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, Card.RUNE_BLACK)
+modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, modBV.betterVoidingColls, Isaac.GetItemIdByName("Void"))
+modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, modBV.betterVoidingColls, Isaac.GetItemIdByName("Abyss"))
+modBV:AddCallback(ModCallbacks.MC_USE_CARD, modBV.betterVoidingCards, Card.RUNE_BLACK)
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -915,17 +990,17 @@ modBV:AddCallback(ModCallbacks.MC_USE_CARD, betterVoidingCards, Card.RUNE_BLACK)
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 -- If collectible 'Genesis' is used
-local function genesisActivated()
+function modBV:genesisActivated()
     genesisActive = true
 end
 
 -- If the player leaves the Genesis-Home room regulary
-local function genesisDeactivated()
+function modBV:genesisDeactivated()
     genesisActive = false
 end
 
 -- Fixes the OptionsPickupIndex from the collectibles spawned by 'Genesis'
-local function genesisFix()
+function modBV:genesisFix()
     if (genesisActive and game:GetRoom():GetType() == RoomType.ROOM_ISAACS) then
         local collList = BetterVoiding.calculatePickupDist(nil, STD_FLAGS_PC)
         for coll, _ in pairs(collList) do
@@ -935,45 +1010,15 @@ local function genesisFix()
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
-modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, genesisActivated, Isaac.GetItemIdByName("Genesis"))
-modBV:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, genesisDeactivated)
-modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_UPDATE, genesisFix)
+modBV:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, modBV.genesisActivated, Isaac.GetItemIdByName("Genesis"))
+modBV:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, modBV.genesisDeactivated)
+modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_UPDATE, modBV.genesisFix)
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Pre Voiding Animation
 -------------------------------------------------------------------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------------------------------------------------------------------
--- Returns the index in the betterVoidingItemTable from the BetterVoiding item with the betterVoidingItemType and itemSubType.
------ @Return: Index of the BetterVoiding item, or -1 if BetterVoiding item doesn't exist
--------------------------------------------------------------------------------------------------------------------------------------------
-local function getBetterVoidingItemIndex(betterVoidingItemType, itemSubType)
-    if itemSubType == 0 then return -1 end
-
-    local betterVoidingItemTable = betterVoidingItemTables[betterVoidingItemType]
-
-    if betterVoidingItemTable ~= nil then
-        for i = 1, betterVoidingItemTable.COUNT do
-            if betterVoidingItemTable.TYPE[i] == itemSubType then
-                return i
-            end
-        end
-    end
-    return -1
-end
-
--------------------------------------------------------------------------------------------------------------------------------------------
--- Checks if a BetterVoiding item with the betterVoidingItemType and itemSubType exists.
------ @Return: True if BetterVoiding item exists, False otherwise
--------------------------------------------------------------------------------------------------------------------------------------------
-function BetterVoiding.isBetterVoidingItem(betterVoidingItemType, itemSubType)
-    if getBetterVoidingItemIndex(betterVoidingItemType, itemSubType) == -1 then
-        return false
-    end
-    return true
-end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Check if at least one PreVoidingAnimation is playing.
@@ -1066,7 +1111,7 @@ end
 --- which the BetterVoiding item will void. ORDER: PillSlot > ActiveSlot
 -- The PreVoidingAnimations are spawned synchronously, by waiting for all PreVoidingAnimations to end before starting them again.
 -------------------------------------------------------------------------------------------------------------------------------------------
-local function preVoidingAnimation()
+function modBV:preVoidingAnimation()
     if isPreVoidingAnimationPlaying() then
         return
     end
@@ -1094,7 +1139,7 @@ local function preVoidingAnimation()
 end
 
 -- Resets the table which stores PreVoidingAnimation entities and sprites
-local function resetPreVoidingAnimations()
+function modBV:resetPreVoidingAnimations()
     for _, anmEntity in pairs(preVoidingAnmEntitys) do
         anmEntity:Remove()
     end
@@ -1103,6 +1148,6 @@ local function resetPreVoidingAnimations()
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
-modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_RENDER, preVoidingAnimation)
-modBV:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, resetPreVoidingAnimations)
+modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_RENDER, modBV.preVoidingAnimation)
+modBV:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, modBV.resetPreVoidingAnimations)
 -------------------------------------------------------------------------------------------------------------------------------------------

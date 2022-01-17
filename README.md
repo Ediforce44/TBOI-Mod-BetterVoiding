@@ -36,7 +36,8 @@ Now let's start talking about the Better Voiding API.
    - `BetterVoidingItemType` Is an Enum to simply set the item type (collectible, card etc.) of a Better Voiding item, if you initialise it in this mod.
 - **Functions**
   - > Many of the functions have ***default*** values set for their parameters. They are written in italic. But maybe also take a look at the sourcecode docs.
-  - `calculatePickupDist(position, flagsPC) : KeyTable(Pickup,Distance)` Determins all ***flagsPC*** matching pickups in the current room and their distance to **position***.
+  - `clearPedestal(pedestalEntity) : void` Modifies **pedestalEntity** to be treated and to look like an empty pedestal.
+  - `calculatePickupDist(position, flagsPC) : KeyTable(Pickup,Distance)` Determins all ***flagsPC*** matching pickups in the current room and their distance to ***position***.
   - `getNearestPickup(position, flagsPC) : Pickup` Returns nearest ***flagsPC*** matching pickup to ***position***.
   - `isPickupPayable(pickup, sourceEntity) : Boolean` Returns if the **pickup** is payable by ***sourceEntity***.
   - `getNearestPayablePickup(sourceEntity, flagsPC, position) : Pickup` Returns nearest ***flagsPC*** matching pickup to ***position***, which is payable by ***sourceEntity***.
@@ -51,6 +52,7 @@ Now let's start talking about the Better Voiding API.
     - It sets the **betterVoidingItemType**, **itemType**, ***flagsV***, ***flagsPC*** and ***preVoidingColor***.
     - If **generateModCallback** is true, a new ModCallback for the Better Voiding item is automatically created. This will turn it into a Better Voiding item.
     - The *BVIID* should be safed, because it is important for the following functions.
+  - `isBetterVoidingItem(betterVoidingItemType, itemSubType) : Boolean` Checks if a BetterVoiding item with the **betterVoidingItemType** and **itemSubType** exists.
   - `betterVoiding(betterVoidingItemID, sourceEntity) : KeyTable(Pickup, Distance)` Prepares everything for voiding pickups with a BetterVoiding item associated with the **betterVoidingItemID** and based on ***sourceEntity***.
     - It returns a KeyTable of pickups, which are selected by the Better Voiding item based on its set flags.
   - `betterVoidingRA(betterVoidingItemID, sourceEntity) : Enum` Voids ALL pickups with a BetterVoiding item associated with the **betterVoidingItemID** and based on ***sourceEntity***.

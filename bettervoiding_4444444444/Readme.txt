@@ -50,8 +50,11 @@ API Member
    - "BetterVoidingItemType"
     Is an Enum to simply set the item type (collectible, card etc.) of a Better Voiding item, if you initialise it in this mod.
 - Functions
-    > Many of the functions have default values set for their parameters. They are written in italic. But maybe also take a look at 
-        the sourcecode docs.
+    > Many of the functions have default values set for their parameters. To have a closer look go to the github page or
+        look at the sourcecode docs.
+        
+  - "clearPedestal(pedestalEntity) : void"
+    Modifies pedestalEntity to be treated and to look like an empty pedestal.
   
   - "calculatePickupDist(position, flagsPC) : KeyTable(Pickup,Distance)"
     Determins all flagsPC matching pickups in the current room and their distance to position.
@@ -87,6 +90,9 @@ API Member
     - If generateModCallback is true, a new ModCallback for the Better Voiding item is automatically created. This will turn it into a 
         Better Voiding item.
     - The BVIID should be safed, because it is important for the following functions.
+    
+  - "isBetterVoidingItem(betterVoidingItemType, itemSubType) : Boolean" 
+    Checks if a BetterVoiding item with the betterVoidingItemType and itemSubType exists.
   
   - "betterVoiding(betterVoidingItemID, sourceEntity) : KeyTable(Pickup, Distance)" 
     Prepares everything for voiding pickups with a BetterVoiding item associated with the betterVoidingItemID and 

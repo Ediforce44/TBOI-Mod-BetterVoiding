@@ -1,0 +1,5 @@
+Layer Count = 6
+
+Layer 1 = Item PNG
+Layer 4 = Item Shadow
+Layer 5 = Pedestal

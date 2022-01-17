@@ -33,17 +33,18 @@ BetterVoiding.VoidingFlags = {
     V_NEAREST_PAYABLE_PICKUP = 1<<2,        --Nearest payable Pickup
 }
 -- Flags to select pickups in a room
+local PCF_TYPE_OFFSET = 10
 BetterVoiding.PickupCategoryFlags = {
     PC_ALL_PICKUPS = 0,
     PC_PRICE_FREE = 1<<0,                   --PickupPrices
     PC_PRICE_HEARTS = 1<<1,
     PC_PRICE_COINS = 1<<2,
     PC_PRICE_SPIKES = 1<<3,
-    PC_TYPE_COLLECTIBLE = 1<<10,            --PickupTypes
-    PC_TYPE_TRINKET = 1<<11,
-    PC_TYPE_PILL = 1<<12,
-    PC_TYPE_CARD = 1<<13,
-    PC_TYPE_CONSUMABLE = 1<<14
+    PC_TYPE_COLLECTIBLE = 1<<(PCF_TYPE_OFFSET + 0),            --PickupTypes
+    PC_TYPE_TRINKET = 1<<(PCF_TYPE_OFFSET + 1),
+    PC_TYPE_PILL = 1<<(PCF_TYPE_OFFSET + 2),
+    PC_TYPE_CARD = 1<<(PCF_TYPE_OFFSET + 3),
+    PC_TYPE_CONSUMABLE = 1<<(PCF_TYPE_OFFSET + 4)
 }
 -- Standard values for BetterVoiding items
 local STD_COLOR = Color(0.5,0.5,0.5,0.9,0,0,0)
@@ -234,14 +235,13 @@ local function getLookUpTableForPCFlags(flagsPC)
     local lookUpTable = {}
 
     -- Handle PickupCategoryFlags
-    local offset = 10
     if (flagsPC == BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS) then
         flagsPC = ~0        --activate all flags (= ...111111111)
-    elseif ((flagsPC & (2^offset - 1)) == 0) then
-        flagsPC = flagsPC | (2^offset - 1)
+    elseif ((flagsPC & (2^PCF_TYPE_OFFSET - 1)) == 0) then
+        flagsPC = flagsPC | (2^PCF_TYPE_OFFSET - 1)
     end
-    if ((flagsPC >> offset) == 0) then
-        flagsPC = flagsPC | ~(2^offset - 1)
+    if ((flagsPC >> PCF_TYPE_OFFSET) == 0) then
+        flagsPC = flagsPC | ~(2^PCF_TYPE_OFFSET - 1)
     end
 
     setPriceFlagsInLUT(flagsPC, lookUpTable)
@@ -297,7 +297,7 @@ local function refreshPickupTables(takenPickup, pickupTables, pickupIndexTables)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Distributes pickups (from pickupTables[3]) in the pickupTables for Voiding Flags: Nearest Payable Pickup
+-- Distributes pickups (from pickupTables[3]) in the pickupTables for the Voiding Flag: V_NEAREST_PAYABLE_PICKUP
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function manageVFlags_NPP(pickupTables, pickupIndexTables, sourceEntity, position, flagsPC)
     local nearestPickup = BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC, position)
@@ -308,7 +308,7 @@ local function manageVFlags_NPP(pickupTables, pickupIndexTables, sourceEntity, p
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Distributes pickups (from pickupTables[3]) in the pickupTables for Voiding Flags: Nearest Pickup
+-- Distributes pickups (from pickupTables[3]) in the pickupTables for the Voiding Flag: V_NEAREST_PICKUP
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function manageVFlags_NP(pickupTables, pickupIndexTables, position, flagsPC)
     local nearestPickup = BetterVoiding.getNearestPickup(position, flagsPC)
@@ -319,7 +319,7 @@ local function manageVFlags_NP(pickupTables, pickupIndexTables, position, flagsP
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Distributes pickups (from pickupTables[3]) in the pickupTables for Voiding Flags: All Free Pickups
+-- Distributes pickups (from pickupTables[3]) in the pickupTables for the Voiding Flag: V_ALL_FREE_PICKUPS
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function manageVFlags_AFP(pickupTables, pickupIndexTables)
     local nearestPickup = nil
@@ -387,7 +387,7 @@ function BetterVoiding.calculatePickupDist(position, flagsPC)
     local pickupPrice = 0
 
     -- Filter room for pickups
-    for _,entity in pairs(Isaac.FindByType(EntityType.ENTITY_PICKUP)) do
+    for _, entity in pairs(Isaac.FindByType(EntityType.ENTITY_PICKUP)) do
         pickup = entity:ToPickup()
         pickupPrice = pickup.Price
         if pickupPrice > 0 then pickupPrice = 1 end     --replace price for shop pickups (For Look-Up-Table)
@@ -484,6 +484,8 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Clones pickup on the next free position to clonePosition (default = pickup.Position) with/without a cloneAnimation (default = true)
+--- The old pickup is removed after cloning. It is like a pickup teleportation.
+-- <<< Doesn't obtain the spectral "Flip" collectible on a pedestal >>>
 ----- @Return: Cloned pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
@@ -532,7 +534,6 @@ function BetterVoiding.selectPickups(sourceEntity, flagsV, flagsPC, position)
     flagsPC = flagsPC or BetterVoiding.PickupCategoryFlags.PC_ALL_PICKUPS
     position = position or sourceEntity.Position
 
-    local nearestPickup = nil
     --[1] = pickups which are voidable, [2] = pickups which should be removed, [3] = pickups which doesn't belong to selectedPickups or lostPickups
     local pickupTables = {{}, {}, BetterVoiding.calculatePickupDist(position, flagsPC)}
     local pickupIndexTables = groupPickupsByIndices(pickupTables[3])               --remainingPickups grouped by their OptionsPickupIndex

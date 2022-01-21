@@ -18,6 +18,9 @@ local modBV = RegisterMod("Better Voiding", 1)
 local game = Game()
 local itemPool = game:GetItemPool()
 local seeds = game:GetSeeds()
+-- Marked spectral items (from 'Flip')
+local currentStage = LevelStage.STAGE_NULL
+local spectralItemTable = {}
 -- Used to detect if player is in Genesis-HOME room
 local genesisActive = false
 -- Used for PreVoiding animations
@@ -25,7 +28,12 @@ local preVoidingAnmEntitys = {}
 local preVoidingAnmSprites = {}
 
 -- To access BetterVoiding functions from outside this mod
-BetterVoiding = {version = "1.1"}
+BetterVoiding = {version = "1.3"}
+-- Pedestal marks
+BetterVoiding.PedestalMarks = {
+    REMOVE = "PM_REMOVE",
+    MOVE = "PM_MOVE"
+}
 -- Flags to determine how the voiding of an BetterVoiding item works
 BetterVoiding.VoidingFlags = {
     V_ALL_FREE_PICKUPS = 1<<0,              --All free Pickups
@@ -130,15 +138,26 @@ local function findEntityInTable(entityRef, entityTable)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
+-- Checks if a entity has a spectral version caused through 'Flip'.
+----- @Return: True, if spectral version exists, False otherwise
+-------------------------------------------------------------------------------------------------------------------------------------------
+local function hasSpectralVersion(entity)
+    return spectralItemTable[tostring(game:GetLevel():GetCurrentRoomDesc().SpawnSeed) .. tostring(entity.Position.X)
+        .. tostring(entity.Position.Y)] == 1
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
 -- Spawns a new pickup in the shop on the position of prePickup. Is used to manage GreedShops and for the Restock collectible
 ----- @Return: New pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function restockShopPickup(prePickup)
-    local newPickup = nil
-
-    newPickup = game:Spawn(prePickup.Type, prePickup.Variant, prePickup.Position, Vector(0,0), nil, 0, seeds:GetNextSeed()):ToPickup()
+    local newPickup = game:Spawn(prePickup.Type, prePickup.Variant, prePickup.Position, Vector(0,0), nil, 0, seeds:GetNextSeed()):ToPickup()
     newPickup:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE | EntityFlag.FLAG_APPEAR)      --disable spawn animation and damocles effect
     newPickup.ShopItemId = prePickup.ShopItemId     --set new pickup on the same shopposition
+
+    if hasSpectralVersion(prePickup) then
+        prePickup:GetData()[BetterVoiding.PedestalMarks.MOVE] = 1
+    end
 
     return newPickup
 end
@@ -735,7 +754,11 @@ function BetterVoiding.payPickup(pickup, sourceEntity, forVoiding)
 
         ::payed::
 
-        --pickup = manageRestock(pickup, forVoiding) --doesn't work as intended
+        if not hasSpectralVersion(pickup) then
+            pickup:GetData()[BetterVoiding.PedestalMarks.REMOVE] = 1
+        end
+
+        pickup = manageRestock(pickup, forVoiding) --doesn't work as intended
 
         pickup = BetterVoiding.managePickupIndices({pickup})[1]
 
@@ -1002,9 +1025,10 @@ end
 -- Fixes the OptionsPickupIndex from the collectibles spawned by 'Genesis'
 function modBV:genesisFix()
     if (genesisActive and game:GetRoom():GetType() == RoomType.ROOM_ISAACS) then
-        local collList = BetterVoiding.calculatePickupDist(nil, STD_FLAGS_PC)
-        for coll, _ in pairs(collList) do
-            coll.OptionsPickupIndex = 200
+        local collEntityList = Isaac.FindByType(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE)
+        for _, collEntity in pairs(collEntityList) do
+            collEntity:ToPickup().OptionsPickupIndex = 200
+            collEntity:GetData()[BetterVoiding.PedestalMarks.REMOVE] = 1
         end
     end
 end
@@ -1015,6 +1039,41 @@ modBV:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, modBV.genesisDeactivated)
 modBV:AddCallback(ModCallbacks.MC_POST_PICKUP_UPDATE, modBV.genesisFix)
 -------------------------------------------------------------------------------------------------------------------------------------------
 
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+-- Mark spectral items
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+-- Adds spectral items to the spectralItemTable
+function modBV:addSpectralItemsToTable()
+    local level = game:GetLevel()
+    if level:GetCurrentRoom():IsFirstVisit() then
+        for playerIndex = 0, game:GetNumPlayers() do
+            if Isaac.GetPlayer(playerIndex):HasCollectible(Isaac.GetItemIdByName("Flip")) then
+                local collEntities = Isaac.FindByType(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE)
+                for _, entity in pairs(collEntities) do
+                    spectralItemTable[tostring(level:GetCurrentRoomDesc().SpawnSeed) .. tostring(entity.Position.X) .. tostring(entity.Position.Y)] = 1
+                end
+
+                return
+            end
+        end
+    end
+end
+
+-- Cleans spectralItemTable
+function modBV:cleanSpectralItemTable()
+    local newStage = game:GetLevel():GetStage()
+    if currentStage ~=  newStage then
+        spectralItemTable = {}
+        currentStage = newStage
+    end
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+modBV:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, modBV.addSpectralItemsToTable)
+modBV:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, modBV.cleanSpectralItemTable)
+-------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Pre Voiding Animation

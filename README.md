@@ -34,6 +34,8 @@ Now let's start talking about the Better Voiding API.
    - `VoidingFlags` Is an Enum, which can easily be used to set Voiding Flags for your functions from this API.
    - `PickupCategoryFlags` Is also an Enum, which can be used to set Pickup Category Flags for functions from this API.
    - `BetterVoidingItemType` Is an Enum to simply set the item type (collectible, card etc.) of a Better Voiding item, if you initialise it in this mod.
+   - `PedestalMarks` Is an Enum which contains ***unique strings*** to mark pickups/pedestals by modifing there Data filed `GetData()["string"] = 1`.
+     - The marked pickups/pedestals will be handeld on the next call of `clearPedestal()`. 
 - **Functions**
   - > Many of the functions have ***default*** values set for their parameters. They are written in italic. But maybe also take a look at the sourcecode docs.
   - `clearPedestal(pedestalEntity) : void` Modifies **pedestalEntity** to be treated and to look like an empty pedestal.
@@ -41,6 +43,8 @@ Now let's start talking about the Better Voiding API.
   - `getNearestPickup(position, flagsPC) : Pickup` Returns nearest ***flagsPC*** matching pickup to ***position***.
   - `isPickupPayable(pickup, sourceEntity) : Boolean` Returns if the **pickup** is payable by ***sourceEntity***.
   - `getNearestPayablePickup(sourceEntity, flagsPC, position) : Pickup` Returns nearest ***flagsPC*** matching pickup to ***position***, which is payable by ***sourceEntity***.
+  - `teleportPickup(pickup, teleportPosition) : Vector` Teleports **pickup** to the next free position to ***teleportPosition***. 
+    - Returns the new position to which **pickup** is teleported.
   - `clonePickup(pickup, cloneAnimation, clonePosition) : Pickup` Clones **pickup** on the next free ***position*** to clonePosition with/without a ***cloneAnimation***.
   - `selectPickups(sourceEntity, flagsV, flagsPC, position) : Table` Sorts all ***flagsPC*** matching pickups in a room based on ***flagsV***, ***sourceEntity*** and ***position***. 
     - It returns a table of three `KeyTable(Pickup, Distance to position)`.

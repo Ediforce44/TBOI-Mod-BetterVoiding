@@ -174,7 +174,7 @@ local function manageGreedShop(pickup, forVoiding)
     if forVoiding then
         return pickup
     else
-        return BetterVoiding.clonePickup(pickup, true)      --clone pickup on next free position if it is not forVoiding
+        return BetterVoiding.teleportPickup(pickup)      --moves pickup to next free position to itself
     end
 end
 
@@ -182,6 +182,7 @@ end
 -- If the player holds 'Restock', new pickups will spawn in the shop when pickup got payed.
 -- If pickup is not forVoiding, it will be moved next to the new shop pickup
 -- <<< The price doesn't work if and only if the player is voiding shop pickups and then buying pickup regulary or vice versa >>>
+-- <<< If you left the room, the custom "data" will deleted >>>
 ----- @Return: Payed pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
 local function manageRestock(pickup, forVoiding)
@@ -219,11 +220,11 @@ local function manageRestock(pickup, forVoiding)
         newPickupData['Price'] = newPickupPrice
     end
     -- Check if pickup is forVoiding
-    if forVoiding then
-        return pickup
-    else
-        return BetterVoiding.clonePickup(pickup, true)      --clone pickup on next free position if it is not forVoiding
+    if not forVoiding then
+        BetterVoiding.teleportPickup(pickup)      --move pickup to next free position to itself
     end
+
+    return pickup
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -533,8 +534,22 @@ function BetterVoiding.getNearestPayablePickup(sourceEntity, flagsPC, position)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
+-- Teleports pickup to the next free position to teleportPosition (default = pickup.Position)
+----- @Return: Position to which pickup is teleported
+-------------------------------------------------------------------------------------------------------------------------------------------
+function BetterVoiding.teleportPickup(pickup, teleportPosition)
+    if pickup == nil then return nil end
+    teleportPosition = teleportPosition or pickup.Position
+
+    local newPosition = game:GetRoom():FindFreePickupSpawnPosition(teleportPosition)
+    pickup.Wait = 25
+    pickup.Position = newPosition
+    pickup.TargetPosition = newPosition
+    return newPosition
+end
+
+-------------------------------------------------------------------------------------------------------------------------------------------
 -- Clones pickup on the next free position to clonePosition (default = pickup.Position) with/without a cloneAnimation (default = true)
---- The old pickup is removed after cloning. It is like a pickup teleportation.
 -- <<< Doesn't obtain the spectral "Flip" collectible on a pedestal >>>
 ----- @Return: Cloned pickup
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -566,7 +581,6 @@ function BetterVoiding.clonePickup(pickup, cloneAnimation, clonePosition)
     for key, value in pairs(pickup:GetData()) do
         clonedPickupData[key] = value
     end
-    pickup:Remove()
 
     return clonedPickup
 end
@@ -922,7 +936,7 @@ end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
 -- Prepares everything for voiding pickups with a BetterVoiding item associated with the betterVoidingItemID and
---- based on sourceEntity (default = Player_0)
+--- based on sourceEntity (default = Player_0) !!!Doesn't work with genesis!!!
 ----- @Return: KeyTable of (Keys: Remaining voidable pickups, Values: Distance to sourceEntity)
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.betterVoiding(betterVoidingItemID, sourceEntity)
@@ -1017,7 +1031,7 @@ function modBV:genesisActivated()
     genesisActive = true
 end
 
--- If the player leaves the Genesis-Home room regulary
+-- If the player leaves the Genesis-Home room
 function modBV:genesisDeactivated()
     genesisActive = false
 end

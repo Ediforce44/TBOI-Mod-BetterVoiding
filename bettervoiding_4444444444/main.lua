@@ -414,13 +414,26 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------------------------------------------------
--- Modifies pedestalEntity to be treated and to look like an empty pedestal.
+-- Modifies pedestalEntity to be treated and look like a empty pedestal.
+-- If a pedestalEntity is marked with BetterVoiding.PedestalMarks, the marks will be resolved.
+-- <<< Call this immediately after you handled the pickups from BetterVoiding.betterVoiding (NOT BetterVoiding.betterVoidingRA) >>>
 -------------------------------------------------------------------------------------------------------------------------------------------
 function BetterVoiding.clearPedestal(pedestalEntity)
     pedestalEntity.SubType = 0
-    pedestalEntity:GetSprite():ReplaceSpritesheet(1, "gfx/items/collectibles/collectibles_NULL.png")
-    pedestalEntity:GetSprite():ReplaceSpritesheet(4, "gfx/items/collectibles/collectibles_NULL.png")
-    pedestalEntity:GetSprite():LoadGraphics()
+    local pedestalSprite = pedestalEntity:GetSprite()
+    pedestalSprite:SetAnimation("Empty", true)
+    pedestalSprite:ReplaceSpritesheet(4, "gfx/items/collectibles/collectibles_NULL.png")
+    pedestalSprite:LoadGraphics()
+    local pedestalPrePosition = pedestalEntity.Position
+    local pedestalData = pedestalEntity:GetData()
+    if pedestalData[BetterVoiding.PedestalMarks.REMOVE] == 1 then
+        pedestalEntity:Remove()
+    elseif pedestalData[BetterVoiding.PedestalMarks.MOVE] == 1 then
+        BetterVoiding.teleportPickup(pedestalEntity, Vector(pedestalEntity.TargetPosition.X + 40, pedestalEntity.TargetPosition.Y))
+        pedestalEntity:GetData()[BetterVoiding.PedestalMarks.MOVE] = 0
+    end
+    spectralItemTable[tostring(game:GetLevel():GetCurrentRoomDesc().SpawnSeed) .. tostring(pedestalPrePosition.X)
+            .. tostring(pedestalPrePosition.Y)] = 0
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -807,8 +820,7 @@ end
 local function preparePickupsForBuildInVoiding(entityList)
     for entity, _ in pairs(entityList) do
         local duplicatedEntity = Isaac.Spawn(EntityType.ENTITY_PICKUP, entity.Variant, entity.SubType, entity.Position, Vector(0, 0), nil)
-        duplicatedEntity:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE)
-        duplicatedEntity:ClearEntityFlags(EntityFlag.FLAG_APPEAR)
+        duplicatedEntity:ClearEntityFlags(EntityFlag.FLAG_ITEM_SHOULD_DUPLICATE | EntityFlag.FLAG_APPEAR)
         BetterVoiding.clearPedestal(entity)
     end
 end
@@ -816,7 +828,8 @@ end
 -- Function for already existing voiding-collectibles and their ModCallbacks to turn them into BetterVoiding items
 function modBV:betterVoidingColls(collType, _, playerEntity)
     playerEntity = playerEntity or Isaac.GetPlayer()
-    preparePickupsForBuildInVoiding(BetterVoiding.betterVoiding((collType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE), playerEntity))
+    preparePickupsForBuildInVoiding(BetterVoiding.betterVoiding((collType << 3 | BetterVoiding.BetterVoidingItemType.TYPE_COLLECTIBLE)
+        , playerEntity))
     return nil
 end
 

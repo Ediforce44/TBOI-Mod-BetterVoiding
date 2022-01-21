@@ -38,7 +38,7 @@ Now let's start talking about the Better Voiding API.
      - The marked pickups/pedestals will be handeld on the next call of `clearPedestal()`. 
 - **Functions**
   - > Many of the functions have ***default*** values set for their parameters. They are written in italic. But maybe also take a look at the sourcecode docs.
-  - `clearPedestal(pedestalEntity) : void` Modifies **pedestalEntity** to be treated and to look like an empty pedestal.
+  - `clearPedestal(pedestalEntity) : void` Modifies **pedestalEntity** to be treated and to look like an empty pedestal. If a pedestalEntity is marked with "PedestalMarks", the marks will be resolved.
   - `calculatePickupDist(position, flagsPC) : KeyTable(Pickup,Distance)` Determins all ***flagsPC*** matching pickups in the current room and their distance to ***position***.
   - `getNearestPickup(position, flagsPC) : Pickup` Returns nearest ***flagsPC*** matching pickup to ***position***.
   - `isPickupPayable(pickup, sourceEntity) : Boolean` Returns if the **pickup** is payable by ***sourceEntity***.

@@ -58,6 +58,7 @@ API Member
         
   - "clearPedestal(pedestalEntity) : void"
     Modifies pedestalEntity to be treated and to look like an empty pedestal.
+    If a pedestalEntity is marked with "PedestalMarks", the marks will be resolved.
   
   - "calculatePickupDist(position, flagsPC) : KeyTable(Pickup,Distance)"
     Determins all flagsPC matching pickups in the current room and their distance to position.

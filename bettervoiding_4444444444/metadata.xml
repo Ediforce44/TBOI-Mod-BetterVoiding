@@ -21,10 +21,15 @@ If you want to start implementing the Better Voiding API, it's good to start by 
 
 [h2] Bugs and TODOs [/h2]
 [list]
- [*] Restock doesn't work correctly if you void an item and then buy one
- [*] The &quot;spectral&quot; item from Flip disappears if you void the main item - [b]Standing Cirno Fumo[/b]
+ [*] Restock doesn't work correctly if you void an item and then buy one 
+ [*] API: betterVoiding() doesn't trigger room-effects like challenge rooms and bossrush
+[/list]
+
+[h3] Notes [/h3]
+[list]
+ [*] If you pay &quot;Flip&quot;-Pickups with your Better Voiding item, the spectral version stayes behind the pedestal. This is a Bug of the original game. For example if you use Coupon on a &quot;Flip&quot;-Pickup, it's the same.
 [/list]</description>
-    <version>1.1</version>
+    <version>1.4</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Items"/>
